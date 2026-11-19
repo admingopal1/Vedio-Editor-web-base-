@@ -477,6 +477,7 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
       <button class="tb" id="bAddA" data-tip="Add audio track"><svg class="i"><use href="#i-plus"/></svg>Audio track</button>
       <button class="tb" id="bVoice" data-tip="Record voiceover from microphone"><svg class="i"><use href="#i-mic"/></svg><span>Voice</span></button>
       <button class="tb" id="bDetach" data-tip="Detach audio from selected video into its own audio track"><svg class="i"><use href="#i-mic"/></svg><span>Detach audio</span></button>
+      <button class="tb" id="bSubs" data-tip="Import or export subtitles (SRT / VTT)"><svg class="i"><use href="#i-text"/></svg><span>Subtitles</span></button>
       <button class="tb" id="bText" data-tip="Add text (T)"><svg class="i"><use href="#i-text"/></svg>Text</button>
       <button class="tb" id="bMark" data-tip="Add marker (M)"><svg class="i"><use href="#i-flag"/></svg>Marker</button>
       <div class="divider"></div>
@@ -2430,7 +2431,8 @@ function audio(){
 function hookAudio(el){
   if(el._gain)return el._gain;
   try{ audio(); const src=AC.createMediaElementSource(el); const g=AC.createGain(); g.gain.value=1;
-    src.connect(g); g.connect(MASTER); el._gain=g; el.volume=1; }catch(e){}
+    const hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=10;const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=22000;
+    src.connect(hp);hp.connect(lp);lp.connect(g); g.connect(MASTER); el._gain=g; el._hp=hp; el._lp=lp; el.volume=1; }catch(e){}
   return el._gain;
 }
 function setVol(el,v){ if(el._gain)el._gain.gain.value=v; else el.volume=clamp(v,0,1); }
@@ -2818,7 +2820,8 @@ function syncMedia(){
     if(active){
       const target=clamp(c.in+(t-c.start)*c.speed,0,(media(c.mediaId)?.dur||1e9)-.02);
       try{el.playbackRate=clamp(c.speed*(S.exporting?1:S.rate),.0625,16);el.preservesPitch=!!c.pitch}catch(e){}
-      setVol(el,(tr.muted||c.muted)?0:clamp(c.volume*fades(c,t-c.start,d),0,4));
+      setVol(el,(tr.muted||c.muted)?0:clamp(c.volume*fades(c,t-c.start,d)*duckG(c,t),0,4));
+      if(el._hp){el._hp.frequency.value=c.clean?95:10;el._lp.frequency.value=c.clean?9500:22000}
       if(S.playing){
         if(el.paused){ try{el.currentTime=target}catch(e){}; el.play().catch(()=>{}); }
         else if(Math.abs(el.currentTime-target)>.32){ try{el.currentTime=target}catch(e){} }
@@ -2843,7 +2846,7 @@ function loopFrame(now){
     }
     if(S.exporting)exportTick();
   }
-  syncMedia(); render(); if(WC)wcFrame(); updPlayhead(); vu();
+  if(!S.offline){syncMedia(); render();} if(WC)wcFrame(); updPlayhead(); vu();
   requestAnimationFrame(loopFrame);
 }
 function play(){ if(S.duration<=0)return toast('Timeline is empty','info');
@@ -3338,7 +3341,11 @@ function inspHTML(c,tab){
   if(tab==='audio'){
     return sec('Levels','vol',R('Clip volume','volume',c.volume,0,2,.01)+T('Mute clip','muted',c.muted))
       +sec('Fades','music',R('Fade in','afin',c.afin,0,Math.min(8,d),.05,'s')+R('Fade out','afout',c.afout,0,Math.min(8,d),.05,'s'))
-      +`<button class="btn" data-act="audioFade">${icon('wand')}Auto 0.4s fades</button>`;
+      +`<button class="btn" data-act="audioFade">${icon('wand')}Auto 0.4s fades</button>`
+      +sec('Smart audio','wand',`<button class="btn acc" data-act="normalize">${icon('wand')}Normalize volume</button><div style="height:9px"></div>`
+        +T('Voice clean-up (rumble &amp; hiss filter)','clean',c.clean)
+        +T('Auto-duck under other audio','duck',c.duck)+R('Duck level','duckLv',c.duckLv??.25,0,1,.01)
+        +`<p style="color:var(--dim2);font-size:10.5px;margin-top:6px">Duck lowers this clip (e.g. music) while any other un-ducked clip with sound plays.</p>`);
   }
   if(tab==='speed'){
     return sec('Playback speed','speed',
@@ -3374,6 +3381,7 @@ $('#ibody').addEventListener('click',e=>{
   if(act==='kf')addKF();
   if(act==='bothFade'){push();c.tin={type:'fade',dur:Math.min(.6,dur(c)/3)};c.tout={type:'fade',dur:Math.min(.6,dur(c)/3)};syncAll()}
   if(act==='audioFade'){push();c.afin=.4;c.afout=.4;syncAll()}
+  if(act==='normalize')normalizeClip(c);
   /* project fields when nothing selected */
 });
 $('#ibody').addEventListener('input',e=>{
@@ -3445,19 +3453,21 @@ function openExport(){
     </select></div></div>
     <div class="frow"><label>Frame rate</label><div><select class="f" id="eFps">${[24,25,30,60].map(v=>`<option value="${v}"${v===S.project.fps?' selected':''}>${v} fps</option>`).join('')}</select></div></div>
     <div class="frow"><label>Format</label><div><select class="f" id="eFmt">
-      ${(ms.some(m=>m.startsWith('video/mp4'))||wcMode())?'<option value="mp4" selected>MP4 (H.264)</option>':''}
+      ${(ms.some(m=>m.startsWith('video/mp4'))||offMode()||wcMode())?'<option value="mp4" selected>MP4 (H.264)</option>':''}
       <option value="webm">WebM (VP9)</option></select></div></div>
     <div class="frow"><label>Quality</label><div><select class="f" id="eQ">
       <option value="6">Draft · 6 Mbps</option><option value="12" selected>High · 12 Mbps</option>
       <option value="24">Ultra · 24 Mbps</option><option value="45">Master · 45 Mbps</option></select></div></div>
     <div class="frow"><label>Range</label><div style="color:var(--dim);font-size:12px">Full timeline · <b style="color:var(--txt)">${tc(S.duration)}</b> (${Math.ceil(S.duration*S.project.fps)} frames)</div></div>
     <div style="background:rgba(255,176,32,.1);border:1px solid rgba(255,176,32,.3);border-radius:10px;padding:11px;color:#ffd489;font-size:11.5px">
-      ${icon('help')} Rendering happens in real time. Keep this tab visible and focused until it finishes.</div>
+      <span id="eNote"></span></div>
     <div id="eProg" style="display:none"><div class="prog"><i id="eBar"></i></div>
       <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--dim)"><span id="eTxt">Rendering…</span><span id="ePct">0%</span></div></div>`;
   $('#expFoot').innerHTML=`<button class="btn" style="width:auto;padding:9px 16px" onclick="closeModal('mExport')">Cancel</button>
     <button class="btn acc" style="width:auto;padding:9px 20px" id="eGo">${icon('download')}Start render</button>`;
   $('#eGo').onclick=startExport;
+  const note=()=>{$('#eNote').innerHTML=icon('help')+($('#eFmt').value==='mp4'&&offMode()?' Fast render: frames are drawn one by one (no real-time playback), so it keeps working even if the tab is in the background.':' This format records in real time. Keep this tab visible until it finishes. Choose MP4 (H.264) for fast render when available.')};
+  $('#eFmt').onchange=note;note();
   openModal('mExport');
 }
 function startExport(){
@@ -3466,6 +3476,7 @@ function startExport(){
   expCfg={w:Math.round(S.project.w*k/2)*2,h:Math.round(S.project.h*k/2)*2,fps,fmt,q};
   cv.width=expCfg.w;cv.height=expCfg.h;buf.width=cv.width;buf.height=cv.height;fitStage();
   audio();
+  if(fmt==='mp4'&&offMode())return startOffline(fps,q).catch(e=>{console.warn('offline render unavailable',e);if(wcMode())return startWC(fps,q);toast('MP4 export failed – use WebM','err')});
   if(fmt==='mp4'&&wcMode())return startWC(fps,q);
   const stream=cv.captureStream(fps);
   SD=AC.createMediaStreamDestination(); MASTER.connect(SD);
@@ -3547,6 +3558,176 @@ function exportTick(){
 }
 function finishExport(){ pause(); if(WC){setTimeout(wcEnd,260);return} setTimeout(()=>{try{REC&&REC.state!=='inactive'&&REC.stop()}catch(e){}},260); }
 
+
+/* ============================================================================
+   BATCH 1: fast offline MP4 render + autosave/restore
+   ========================================================================== */
+const offMode=()=>!!WCAVC&&typeof Mp4Muxer!=='undefined'&&typeof VideoEncoder!=='undefined'&&typeof OfflineAudioContext!=='undefined';
+const yieldUI=(()=>{const mc=new MessageChannel();let r=null;mc.port1.onmessage=()=>{const f=r;r=null;f&&f()};return()=>new Promise(res=>{r=res;mc.port2.postMessage(0)})})();
+function seekTo(el,tg){return new Promise(res=>{
+  if(el.readyState>=2&&!el.seeking&&Math.abs(el.currentTime-tg)<5e-4)return res();
+  let done=false;const fin=()=>{if(done)return;done=true;el.removeEventListener('seeked',fin);res()};
+  el.addEventListener('seeked',fin);try{el.currentTime=tg}catch(e){fin()}setTimeout(fin,4000)})}
+function frameNeeds(t){const L=[],lim=c=>(media(c.mediaId)?.dur||1e9)-.02;
+  for(const tr of S.tracks){if(tr.hidden||tr.type==='audio')continue;
+    for(const c of tr.clips){if(c.type!=='video')continue;const d=dur(c);
+      if(t>=c.start-.001&&t<c.start+d){const el=elOf(c);el&&L.push([el,clamp(c.in+(t-c.start)*c.speed,0,lim(c))]);
+        if(c.tin&&c.tin.type==='dissolve'&&t-c.start<c.tin.dur){
+          const pv=tr.clips.filter(p=>p.id!==c.id&&end(p)<=c.start+.6&&end(p)>c.start-.6).sort((a,b)=>end(b)-end(a))[0];
+          if(pv&&pv.type==='video'){const e2=elOf(pv);e2&&L.push([e2,clamp(pv.in+(Math.max(pv.start,end(pv)-.04)-pv.start)*pv.speed,0,lim(pv))])}}}}}
+  return L}
+async function mixAudio(sr){
+  const items=[];
+  for(const c of allClips()){if(c.type!=='video'&&c.type!=='audio')continue;const tr=trackOf(c);if(!tr||tr.muted||c.muted||c.volume<=0)continue;
+    const m=media(c.mediaId);if(!m||!m.file)continue;
+    if(m._abSr!==sr){m._abSr=sr;try{m._ab=await new OfflineAudioContext(2,1,sr).decodeAudioData(await m.file.arrayBuffer())}catch(e){m._ab=null}}
+    if(m._ab)items.push([c,m._ab])}
+  if(!items.length)return null;
+  const oac=new OfflineAudioContext(2,Math.max(1,Math.ceil(S.duration*sr)),sr),mg=oac.createGain();mg.gain.value=S.master;mg.connect(oac.destination);
+  for(const [c,b] of items){const src=oac.createBufferSource();src.buffer=b;src.playbackRate.value=clamp(c.speed,.0625,16);
+    const g=oac.createGain(),d=dur(c),t0=c.start,v=clamp(c.volume,0,4);
+    if(c.afin>0){g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(v,t0+Math.min(c.afin,d))}else g.gain.setValueAtTime(v,t0);
+    if(c.afout>0){g.gain.setValueAtTime(v,Math.max(t0+Math.min(c.afin||0,d),t0+d-c.afout));g.gain.linearRampToValueAtTime(0,t0+d)}
+    let node=src;
+    if(c.clean){const hp=oac.createBiquadFilter();hp.type='highpass';hp.frequency.value=95;const lp=oac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=9500;node.connect(hp);hp.connect(lp);node=lp}
+    node.connect(g);node=g;
+    if(c.duck){const dk=oac.createGain(),n=Math.max(2,Math.ceil(d*20)+1),arr=new Float32Array(n);for(let i=0;i<n;i++)arr[i]=duckG(c,t0+Math.min(d,i/20));dk.gain.setValueCurveAtTime(arr,t0,d);node.connect(dk);node=dk}
+    node.connect(mg);src.start(t0,c.in,Math.max(.01,c.out-c.in))}
+  return oac.startRendering()}
+async function startOffline(fps,q){
+  const W=expCfg.w,Hh=expCfg.h,sr=48000;let vc=WCAVC;if(vc.startsWith('avc')&&Math.max(W,Hh)>2560)vc='avc1.640033';
+  const mix=await mixAudio(sr);   /* may throw -> caller falls back to real-time */
+  let ac=null;if(mix){for(const c of['mp4a.40.2','opus']){try{const r=await AudioEncoder.isConfigSupported({codec:c,sampleRate:sr,numberOfChannels:2,bitrate:192000});if(r.supported){ac=c;break}}catch(e){}}}
+  const mux=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),video:{codec:vc.startsWith('avc')?'avc':'vp9',width:W,height:Hh},
+    ...(ac?{audio:{codec:ac==='opus'?'opus':'aac',numberOfChannels:2,sampleRate:sr}}:{}),fastStart:'in-memory',firstTimestampBehavior:'offset'});
+  let err=null;const onErr=e=>{err=e;console.error(e)};
+  const venc=new VideoEncoder({output:(c,m)=>mux.addVideoChunk(c,m),error:onErr});venc.configure({codec:vc,width:W,height:Hh,bitrate:q,framerate:fps});
+  let aenc=null;
+  if(ac){aenc=new AudioEncoder({output:(c,m)=>mux.addAudioChunk(c,m),error:onErr});aenc.configure({codec:ac,sampleRate:sr,numberOfChannels:2,bitrate:192000});
+    const a0=mix.getChannelData(0),a1=mix.numberOfChannels>1?mix.getChannelData(1):a0,N=mix.length;
+    for(let o=0;o<N;o+=48000){const n=Math.min(48000,N-o),d=new Float32Array(n*2);d.set(a0.subarray(o,o+n),0);d.set(a1.subarray(o,o+n),n);
+      aenc.encode(new AudioData({format:'f32-planar',sampleRate:sr,numberOfFrames:n,numberOfChannels:2,timestamp:Math.round(o*1e6/sr),data:d}))}}
+  pause();expCancel=false;S.exporting=true;S.offline=true;S.rate=1;S.loop=false;
+  $('#eProg').style.display='block';$('#eGo').disabled=true;$('#eGo').style.opacity=.5;
+  $('#expFoot').innerHTML=`<button class="btn dgr" style="width:auto;padding:9px 18px" id="eStop">Cancel render</button>`;
+  $('#eStop').onclick=()=>{expCancel=true};
+  $('#vtag').innerHTML=`<span class="rec-dot"></span><span>RENDERING ${W}×${Hh}</span>`;
+  const N=Math.max(1,Math.ceil(S.duration*fps)),t0=performance.now();let ok=true;
+  try{
+    for(let i=0;i<N&&!expCancel&&!err;i++){
+      const t=Math.min(i/fps,Math.max(0,S.duration-.001));S.time=t;
+      await Promise.all(frameNeeds(t).map(([el,tg])=>seekTo(el,tg)));
+      render();
+      const vf=new VideoFrame(cv,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps)});venc.encode(vf,{keyFrame:i%(fps*2)===0});vf.close();
+      if(venc.encodeQueueSize>6)await new Promise(r=>venc.addEventListener('dequeue',r,{once:true}));
+      if(i%4===0){const p=i/N,el=(performance.now()-t0)/1000;$('#eBar')&&($('#eBar').style.width=(p*100)+'%',$('#ePct').textContent=Math.round(p*100)+'%',
+        $('#eTxt').textContent=`Frame ${i}/${N} · ${(i/fps/Math.max(.01,el)).toFixed(1)}× speed`);await yieldUI()}
+    }
+    if(!expCancel&&!err){await venc.flush();if(aenc)await aenc.flush();mux.finalize()}
+  }catch(e){err=e;console.error(e)}
+  S.exporting=false;S.offline=false;
+  try{$('#vtag').innerHTML=`<span id="vtagTxt">${S.project.w} × ${S.project.h} · ${S.project.fps}fps</span>`;sizeCanvas();seekTime(0)}catch(e){}
+  if(expCancel){try{venc.close();aenc&&aenc.close()}catch(e){}closeModal('mExport');toast('Render cancelled','info');return}
+  if(err){try{venc.close();aenc&&aenc.close()}catch(e){}closeModal('mExport');toast('Render failed – try WebM or a lower resolution','err');return}
+  showResult(new Blob([mux.target.buffer],{type:'video/mp4'}),'mp4');
+}
+
+/* ---- Autosave / restore (IndexedDB; videos are stored too, so a reload brings everything back) ---- */
+const idb=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open('cutbox-studio',1);
+  r.onupgradeneeded=()=>{r.result.createObjectStore('media',{keyPath:'id'});r.result.createObjectStore('meta')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
+  const tx=async(st,mode,fn)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction(st,mode),r=fn(t.objectStore(st));t.oncomplete=()=>res(r&&r.result);t.onerror=t.onabort=()=>rej(t.error)})};
+  return{put:(st,v,k)=>tx(st,'readwrite',s=>k===undefined?s.put(v):s.put(v,k)),get:(st,k)=>tx(st,'readonly',s=>s.get(k)),all:st=>tx(st,'readonly',s=>s.getAll()),
+    keys:st=>tx(st,'readonly',s=>s.getAllKeys()),del:(st,k)=>tx(st,'readwrite',s=>s.delete(k)),clear:st=>tx(st,'readwrite',s=>s.clear())}})();
+let asReady=false,asLast='',asBusy=false;
+function asInd(t){let e=$('#saveInd');if(!e){e=document.createElement('span');e.id='saveInd';e.style.cssText='color:var(--dim);font-size:11px;white-space:nowrap';$('#pname').insertAdjacentElement('afterend',e)}e.textContent=t}
+async function autosave(){
+  if(!asReady||asBusy||S.exporting)return;
+  const sig=snap()+S.media.map(m=>m.id).join(',')+S.master;if(sig===asLast)return;asBusy=true;
+  try{
+    for(const m of S.media){if(m._saved||!m.file)continue;
+      await idb.put('media',{id:m.id,name:m.name,type:m.type,dur:m.dur,w:m.w,h:m.h,size:m.size,thumb:typeof m.thumb==='string'?m.thumb:null,strip:typeof m.strip==='string'?m.strip:null,peaks:m.peaks||null,blob:m.file});m._saved=true}
+    const ids=S.media.map(m=>m.id);
+    await idb.put('meta',{tracks:S.tracks,project:S.project,markers:S.markers,mediaIds:ids,master:S.master,savedAt:Date.now()},'project');
+    for(const k of await idb.keys('media'))if(!ids.includes(k))await idb.del('media',k);
+    asLast=sig;asInd('✓ Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+  }catch(e){console.warn('autosave',e);asInd('Autosave unavailable')}
+  asBusy=false}
+async function restoreProject(meta){
+  const rows=await idb.all('media'),by=new Map(rows.map(r=>[r.id,r]));
+  for(const id of meta.mediaIds){const r=by.get(id);if(!r)continue;const url=URL.createObjectURL(r.blob);
+    const m={id:r.id,name:r.name,type:r.type,url,dur:r.dur,w:r.w,h:r.h,thumb:r.thumb,strip:r.strip,peaks:r.peaks,size:r.size,file:r.blob,_saved:true};
+    if(r.type==='video'){const v=document.createElement('video');v.src=url;v.preload='auto';v.muted=true;v.playsInline=true;m.el=v}
+    else if(r.type==='image'){const im=new Image();im.src=url;m.el=im}
+    else{const a=document.createElement('audio');a.src=url;a.preload='auto';m.el=a}
+    S.media.push(m)}
+  S.tracks=meta.tracks;S.project=meta.project;S.markers=meta.markers||[];S.master=meta.master??1;
+  S.tracks.forEach(t=>t.clips=t.clips.filter(c=>c.type==='text'||c.type==='shape'||media(c.mediaId)));
+  prune();calcDur();sizeCanvas();renderLib();
+  try{$('#pname').value=S.project.name;$('#selFps').value=S.project.fps;$('#selAspect').value=S.project.w+'x'+S.project.h;$('#master').value=S.master}catch(e){}
+  syncAll();seekTime(0);toast('Project restored','ok')}
+(async()=>{
+  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+  try{
+    const meta=await idb.get('meta','project');
+    if(meta&&meta.tracks&&meta.tracks.some(t=>t.clips.length)){
+      const n=meta.tracks.reduce((a,t)=>a+t.clips.length,0),b=document.createElement('div');
+      b.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:99999;background:var(--panel2);border:1px solid var(--acc);border-radius:14px;padding:12px 16px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.55);color:var(--txt);font-size:13px;max-width:92vw;flex-wrap:wrap';
+      b.innerHTML=`<span>Previous project found · <b>${n} clips</b> · saved ${new Date(meta.savedAt).toLocaleString([],{dateStyle:'medium',timeStyle:'short'})}</span><button class="btn acc" id="rsYes" style="width:auto;padding:7px 14px">Restore</button><button class="btn" id="rsNo" style="width:auto;padding:7px 14px">Start fresh</button>`;
+      document.body.appendChild(b);
+      $('#rsYes').onclick=async()=>{b.remove();try{await restoreProject(meta)}catch(e){console.error(e);toast('Could not restore project','err')}asReady=true};
+      $('#rsNo').onclick=async()=>{b.remove();try{await idb.clear('media');await idb.clear('meta')}catch(e){}asReady=true};
+    }else asReady=true;
+  }catch(e){asReady=true}
+  setInterval(autosave,2500);
+})();
+addEventListener('beforeunload',()=>{});
+
+/* ============================================================================
+   BATCH 2: smart audio (normalize / duck / voice clean-up) + subtitles
+   ========================================================================== */
+function duckG(c,t){if(!c.duck)return 1;const lv=c.duckLv??.25;let cov=0;
+  for(const o of allClips()){if(o===c||(o.type!=='video'&&o.type!=='audio')||o.duck||o.muted||o.volume<=0)continue;
+    const tr=trackOf(o);if(!tr||tr.muted)continue;const R=.3,x=Math.min(clamp((t-(o.start-R))/R,0,1),clamp((end(o)+R-t)/R,0,1));if(x>cov)cov=x}
+  return 1-(1-lv)*cov}
+async function normalizeClip(c){
+  const m=media(c.mediaId);if(!m||!m.file)return toast('No audio to analyse','info');
+  toast('Analysing audio…','info');
+  if(m._abSr!==48000){m._abSr=48000;try{m._ab=await new OfflineAudioContext(2,1,48000).decodeAudioData(await m.file.arrayBuffer())}catch(e){m._ab=null}}
+  const b=m._ab;if(!b)return toast('This clip has no readable audio','info');
+  const ch=b.getChannelData(0),sr=b.sampleRate,i0=Math.floor(c.in*sr),i1=Math.min(b.length,Math.floor(c.out*sr));let sum=0,pk=0,n=0;
+  for(let i=i0;i<i1;i+=3){const v=ch[i];sum+=v*v;const a=Math.abs(v);if(a>pk)pk=a;n++}
+  if(!n||pk<1e-4)return toast('This part of the clip is silent','info');
+  const rms=Math.sqrt(sum/n),g=Math.min(Math.pow(10,-16/20)/rms,.98/pk,4);
+  push();c.volume=+g.toFixed(2);syncAll();toast(`Volume set to ${c.volume}× (target about −16 dB)`,'ok')}
+function parseSub(txt){const out=[],tm=/(?:(\d+):)?(\d{1,2}):(\d{2})[,.](\d{1,3})\s*-->\s*(?:(\d+):)?(\d{1,2}):(\d{2})[,.](\d{1,3})/;
+  const sc=(h,m,s,ms)=>Number(h||0)*3600+Number(m)*60+Number(s)+Number(String(ms).padEnd(3,'0'))/1000;
+  for(const blk of txt.replace(/\r/g,'').replace(/^\uFEFF?WEBVTT[^\n]*\n/,'').split(/\n\s*\n/)){
+    const ls=blk.split('\n').filter(x=>x.trim()!==''),i=ls.findIndex(x=>tm.test(x));if(i<0)continue;
+    const m=ls[i].match(tm),t=ls.slice(i+1).join('\n').replace(/<[^>]+>/g,'').trim();if(!t)continue;
+    out.push({s:sc(m[1],m[2],m[3],m[4]),e:sc(m[5],m[6],m[7],m[8]),t})}
+  return out}
+function addSubs(cues,atHead){push();const off=atHead?S.time-cues[0].s:0,tr=newTrack('visual','Subs');S.tracks.unshift(tr);
+  const pr={n:'Subtitle',t:{content:'',size:54,weight:700,font:FONTS[0],color:'#ffffff',bg:'rgba(0,0,0,.6)',align:'center',stroke:0,shadow:.4,anim:'none',ls:0},y:34};
+  for(const q of cues){const c=makeText(pr,Math.max(0,q.s+off));c.dur=Math.max(.3,q.e-q.s);c.text.content=q.t;tr.clips.push(c)}
+  calcDur();syncAll();toast(cues.length+' subtitles added','ok')}
+function exportSrt(){const L=allClips().filter(c=>c.type==='text').sort((a,b)=>a.start-b.start);if(!L.length)return toast('No text clips to export','info');
+  const f=t=>{const ms=Math.round(t*1000),P=(n,w)=>String(n).padStart(w,'0');return `${P(Math.floor(ms/3600000),2)}:${P(Math.floor(ms/60000)%60,2)}:${P(Math.floor(ms/1000)%60,2)},${P(ms%1000,3)}`};
+  const out=L.map((c,i)=>`${i+1}\n${f(c.start)} --> ${f(end(c))}\n${c.text.content}\n`).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out],{type:'text/plain'}));a.download=(S.project.name||'subtitles')+'.srt';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500)}
+function subsPanel(){let p=$('#subsPanel');if(p){p.remove();return}
+  p=document.createElement('div');p.id='subsPanel';p.style.cssText='position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,.6);display:grid;place-items:center';
+  p.innerHTML=`<div style="width:min(620px,94vw);background:var(--panel2);border:1px solid var(--line2);border-radius:16px;padding:16px;color:var(--txt)">
+    <b style="font-size:15px">Subtitles</b>
+    <p style="color:var(--dim);font-size:12px;margin:6px 0 10px">Import an .srt / .vtt file or paste subtitles. Each line becomes an editable text clip on its own track. Automatic speech-to-text needs an online AI model and is not included.</p>
+    <input type="file" id="subFile" accept=".srt,.vtt,text/plain" style="margin-bottom:8px;color:var(--dim)">
+    <textarea id="subTxt" rows="9" placeholder="1&#10;00:00:01,000 --> 00:00:03,500&#10;Hello world" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px;font:12px monospace"></textarea>
+    <label style="display:flex;gap:8px;margin:10px 0;font-size:12px;color:var(--dim)"><input type="checkbox" id="subHead"> Start the first subtitle at the playhead</label>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn" id="subExp" style="width:auto;padding:8px 16px">Export SRT</button><button class="btn" id="subX" style="width:auto;padding:8px 16px">Close</button><button class="btn acc" id="subGo" style="width:auto;padding:8px 16px">Add to timeline</button></div></div>`;
+  document.body.appendChild(p);
+  $('#subX').onclick=()=>p.remove();p.addEventListener('pointerdown',e=>{if(e.target===p)p.remove()});
+  $('#subFile').onchange=async e=>{const f=e.target.files[0];if(f)$('#subTxt').value=await f.text()};
+  $('#subExp').onclick=exportSrt;
+  $('#subGo').onclick=()=>{const cues=parseSub($('#subTxt').value);if(!cues.length)return toast('No subtitles found – check the format (00:00:01,000 --> 00:00:03,000)','err');addSubs(cues,$('#subHead').checked);p.remove()}}
 /* ---- Upgrades: WebM duration fix, VU meter, voiceover, mobile panels ---- */
 async function fixWebm(blob,sec){try{
   const u=new Uint8Array(await blob.arrayBuffer());let i=-1;
@@ -3583,6 +3764,7 @@ $('#bDetach').onclick=()=>{const c=sel();if(!c||c.type!=='video')return toast('S
   const m=media(c.mediaId);if(!m)return;push();
   const a=makeClip(m,c.start);a.type='audio';a.in=c.in;a.out=c.out;a.speed=c.speed;a.volume=c.volume;a.name=c.name+' (audio)';
   firstTrack('audio').clips.push(a);c.muted=true;S.sel=a.id;calcDur();syncAll();toast('Audio detached to its own track','ok')};
+$('#bSubs').onclick=subsPanel;
 $('#bLib').onclick=()=>{$('#rightPanel').classList.remove('show');$('#leftPanel').classList.toggle('show')};
 $('#bInsp').onclick=()=>{$('#leftPanel').classList.remove('show');$('#rightPanel').classList.toggle('show')};
 
