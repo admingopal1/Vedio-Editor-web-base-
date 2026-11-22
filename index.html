@@ -3267,10 +3267,25 @@ $('#tscroll').addEventListener('pointerdown',e=>{
   const mk=e.target.closest('[data-mk]');
   if(mk){ const mt=parseFloat(mk.dataset.mk); if(e.altKey){push();S.markers=S.markers.filter(x=>x!==mt);renderTimeline();toast('Marker removed','ok');return} seekTime(mt); return; }
   if(e.target.closest('#ruler')||e.target.closest('.ruler')){
-    const r=$('#tinner').getBoundingClientRect();
-    const mv=ev=>seekTime((ev.clientX-r.left)/S.zoom);
-    mv(e); const up=()=>{document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up)};
-    document.addEventListener('pointermove',mv);document.addEventListener('pointerup',up); return;
+    if(e.button!==undefined&&e.button!==0)return;
+    const rect=$('#tinner').getBoundingClientRect(), pointerId=e.pointerId;
+    let finished=false;
+    const mv=ev=>{if(ev.pointerId===pointerId)seekTime((ev.clientX-rect.left)/S.zoom)};
+    const cleanup=()=>{
+      if(finished)return;
+      finished=true;
+      document.removeEventListener('pointermove',mv);
+      document.removeEventListener('pointerup',up);
+      document.removeEventListener('pointercancel',up);
+      window.removeEventListener('blur',cleanup);
+    };
+    const up=ev=>{if(ev.pointerId===pointerId)cleanup()};
+    mv(e);
+    document.addEventListener('pointermove',mv);
+    document.addEventListener('pointerup',up);
+    document.addEventListener('pointercancel',up);
+    window.addEventListener('blur',cleanup,{once:true});
+    return;
   }
   const cel=e.target.closest('.clip');
   if(!cel){ if(!e.target.closest('.clip')){S.sel=null;clearMs();renderTimeline();renderInspector();render()} return; }
