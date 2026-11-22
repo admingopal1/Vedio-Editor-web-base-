@@ -2926,34 +2926,39 @@ function apply(j){ const o=JSON.parse(j); S.tracks=o.tracks;S.project=o.project;
 function updHist(){ $('#bUndo').disabled=!S.hist.length; $('#bRedo').disabled=!S.fut.length; }
 
 /* ---------------- Import ---------------- */
+const EXT_MIME={mkv:'video/x-matroska',mov:'video/quicktime',avi:'video/x-msvideo',ts:'video/mp2t',m2ts:'video/mp2t',flv:'video/x-flv',wmv:'video/x-ms-wmv','3gp':'video/3gpp',mp4:'video/mp4',m4v:'video/mp4',webm:'video/webm',mpg:'video/mpeg',mpeg:'video/mpeg',ogv:'video/ogg',mp3:'audio/mpeg',m4a:'audio/mp4',aac:'audio/aac',wav:'audio/wav',flac:'audio/flac',ogg:'audio/ogg',opus:'audio/ogg',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',avif:'image/avif',bmp:'image/bmp',svg:'image/svg+xml'};
+const mimeOf=f=>/^(video|image|audio)\//.test(f.type)?f.type:(EXT_MIME[(f.name.split('.').pop()||'').toLowerCase()]||'');
 async function addFiles(files){
-  const arr=[...files].filter(f=>/^(video|image|audio)\//.test(f.type));
-  if(!arr.length){toast('Unsupported file type','err');return[]}
-  const t0=toast('Importing '+arr.length+' file(s)…','info',0);
+  const all=[...files],arr=all.filter(f=>mimeOf(f));
+  if(!arr.length){toast('Unsupported file type: '+(all[0]?all[0].name:''),'err');return[]}
+  const t0=toast('Importing '+arr.length+' file(s)…','info',0);let failed=0;
   for(const f of arr){
-    const type=f.type.split('/')[0], url=URL.createObjectURL(f);
+    const mime=mimeOf(f),type=mime.split('/')[0], url=URL.createObjectURL(f.type===mime?f:f.slice(0,f.size,mime)), bad=why=>{S.media=S.media.filter(x=>x.id!==m.id);try{URL.revokeObjectURL(url)}catch(e){}renderLib();toast(f.name+': '+why,'err');failed++};
     const m={id:uid(),name:f.name.replace(/\.[^.]+$/,''),type,url,dur:5,w:1920,h:1080,thumb:null,strip:null,peaks:null,size:f.size,file:f};
     S.media.push(m); renderLib();
     try{
       if(type==='video'){
         const v=document.createElement('video');v.src=url;v.preload='metadata';v.muted=true;v.playsInline=true;m.el=v;
-        await new Promise(r=>{v.onloadedmetadata=r;v.onerror=r;setTimeout(r,9000)});
+        await new Promise(r=>{v.onloadedmetadata=r;v.onerror=r;setTimeout(r,30000)});
+        if(v.error||!v.videoWidth){bad("this browser can't decode the video (often H.265/HEVC or an unusual codec). Convert it to H.264 MP4 and try again.");continue}
         m.dur=isFinite(v.duration)?v.duration:5;m.w=v.videoWidth||1920;m.h=v.videoHeight||1080;
         await seek(v,Math.min(.15,m.dur/3)); m.thumb=grab(v,m.w,m.h);
         filmstrip(m);
       }else if(type==='image'){
         const im=new Image();im.src=url;m.el=im;
         await new Promise(r=>{im.onload=r;im.onerror=r});
+        if(!im.naturalWidth){bad("this image can't be read. Use JPG, PNG or WebP.");continue}
         m.w=im.naturalWidth;m.h=im.naturalHeight;m.thumb=url;m.dur=5;
       }else{
         const a=document.createElement('audio');a.src=url;a.preload='auto';m.el=a;
-        await new Promise(r=>{a.onloadedmetadata=r;a.onerror=r;setTimeout(r,9000)});
+        await new Promise(r=>{a.onloadedmetadata=r;a.onerror=r;setTimeout(r,30000)});
+        if(a.error){bad("this browser can't play the audio. Convert it to MP3 or WAV and try again.");continue}
         m.dur=isFinite(a.duration)?a.duration:10; peaks(m,f);
       }
     }catch(e){ console.warn(e); }
     renderLib();
   }
-  t0.close(); toast(arr.length+' file(s) imported','ok');
+  t0.close(); if(arr.length-failed>0)toast((arr.length-failed)+' file(s) imported','ok');
 }
 const seek=(v,t)=>new Promise(r=>{ let d=false; const h=()=>{if(d)return;d=true;v.removeEventListener('seeked',h);r()};
   v.addEventListener('seeked',h); try{v.currentTime=t}catch(e){h()} setTimeout(h,2500); });
