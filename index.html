@@ -4270,7 +4270,20 @@ async function exportWav(){
   }catch(e){console.error(e);go.disabled=false;toast('Audio export failed','err')}}
 async function startOffline(fps,q){
   const W=expCfg.w,Hh=expCfg.h,sr=48000;let vc=WCAVC;if(vc.startsWith('avc')&&Math.max(W,Hh)>2560)vc='avc1.640033';
-  let mix=await mixAudio(sr);   /* may throw -> caller falls back to real-time */
+  /* Avoid allocating a full-project PCM mix for very long timelines. The live
+     WebCodecs path keeps audio streaming and avoids the extra decoded mix buffer. */
+  if(S.duration>180&&typeof VideoEncoder!=='undefined'&&typeof AudioEncoder!=='undefined'){
+    toast('Long project detected – using streaming export to reduce audio memory','info');
+    return startWC(fps,q);
+  }
+  pause();expCancel=false;S.exporting=true;S.offline=true;S.rate=1;S.loop=false;
+  $('#eProg').style.display='block';$('#eGo').disabled=true;$('#eGo').style.opacity=.5;
+  $('#expFoot').innerHTML=`<button class="btn dgr" style="width:auto;padding:9px 18px" id="eStop">Cancel render</button>`;
+  $('#eStop').onclick=()=>markExportCancelling();
+  $('#eTxt').textContent='Preparing audio mix…';$('#ePct').textContent='0%';$('#eBar').style.width='0%';
+  $('#vtag').innerHTML=`<span class="rec-dot"></span><span>PREPARING EXPORT ${W}×${Hh}</span>`;
+  let mix=await mixAudio(sr);
+  if(expCancel){S.exporting=false;S.offline=false;closeModal('mExport');toast('Render cancelled','info');return}
   let ac=null;if(mix){for(const c of['mp4a.40.2','opus']){try{const r=await AudioEncoder.isConfigSupported({codec:c,sampleRate:sr,numberOfChannels:2,bitrate:192000});if(r.supported){ac=c;break}}catch(e){}}}
   const mux=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),video:{codec:vc.startsWith('avc')?'avc':'vp9',width:W,height:Hh},
     ...(ac?{audio:{codec:ac==='opus'?'opus':'aac',numberOfChannels:2,sampleRate:sr}}:{}),fastStart:'in-memory',firstTimestampBehavior:'offset'});
@@ -4278,18 +4291,18 @@ async function startOffline(fps,q){
   const venc=new VideoEncoder({output:(c,m)=>mux.addVideoChunk(c,m),error:onErr});venc.configure({codec:vc,width:W,height:Hh,bitrate:q,framerate:fps,hardwareAcceleration:'prefer-hardware'});
   let aenc=null;
   if(ac){aenc=new AudioEncoder({output:(c,m)=>mux.addAudioChunk(c,m),error:onErr});aenc.configure({codec:ac,sampleRate:sr,numberOfChannels:2,bitrate:192000});
-    const a0=mix.getChannelData(0),a1=mix.numberOfChannels>1?mix.getChannelData(1):a0,N=mix.length;
-    for(let o=0;o<N;o+=48000){const n=Math.min(48000,N-o),d=new Float32Array(n*2);d.set(a0.subarray(o,o+n),0);d.set(a1.subarray(o,o+n),n);
+    let a0=mix.getChannelData(0),a1=mix.numberOfChannels>1?mix.getChannelData(1):a0;const N=mix.length,blocks=Math.ceil(N/48000);
+    for(let o=0,bi=0;o<N&&!expCancel&&!err;o+=48000,bi++){
+      while(aenc.encodeQueueSize>8&&!expCancel&&!err)await new Promise(r=>setTimeout(r,16));
+      if(expCancel||err)break;
+      const n=Math.min(48000,N-o),d=new Float32Array(n*2);d.set(a0.subarray(o,o+n),0);d.set(a1.subarray(o,o+n),n);
       const ad=new AudioData({format:'f32-planar',sampleRate:sr,numberOfFrames:n,numberOfChannels:2,timestamp:Math.round(o*1e6/sr),data:d});
       try{aenc.encode(ad)}finally{ad.close()}
+      if(bi%4===0){const p=(bi+1)/blocks;$('#eBar').style.width=(p*5)+'%';$('#ePct').textContent=Math.round(p*5)+'%';$('#eTxt').textContent=`Preparing audio · block ${bi+1}/${blocks}`;await yieldUI()}
     }
-    /* Audio has been queued in the encoder; release the full mixed PCM buffer before video rendering. */
-    mix=null;
+    a0=null;a1=null;mix=null;
   }
-  pause();expCancel=false;S.exporting=true;S.offline=true;S.rate=1;S.loop=false;
-  $('#eProg').style.display='block';$('#eGo').disabled=true;$('#eGo').style.opacity=.5;
-  $('#expFoot').innerHTML=`<button class="btn dgr" style="width:auto;padding:9px 18px" id="eStop">Cancel render</button>`;
-  $('#eStop').onclick=()=>{markExportCancelling()};
+  if(expCancel||err){try{venc.close();aenc&&aenc.close()}catch(e){}S.exporting=false;S.offline=false;try{$('#vtag').innerHTML=`<span id="vtagTxt">${S.project.w} × ${S.project.h} · ${S.project.fps}fps</span>`}catch(e){}closeModal('mExport');toast(expCancel?'Render cancelled':'Audio encoding failed','err');return}
   $('#vtag').innerHTML=`<span class="rec-dot"></span><span>RENDERING ${W}×${Hh}</span>`;
   const N=Math.max(1,Math.ceil(S.duration*fps)),t0=performance.now();let ok=true;
   try{
@@ -4300,7 +4313,7 @@ async function startOffline(fps,q){
       let vf;try{vf=new VideoFrame(cv,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps)});venc.encode(vf,{keyFrame:i%(fps*2)===0})}
       finally{try{vf&&vf.close()}catch(e){}}
       while(venc.encodeQueueSize>12&&!expCancel&&!err)await new Promise(r=>setTimeout(r,16));
-      if(i%4===0){const p=i/N,el=(performance.now()-t0)/1000;$('#eBar')&&($('#eBar').style.width=(p*100)+'%',$('#ePct').textContent=Math.round(p*100)+'%',
+      if(i%4===0){const p=.05+(i/N)*.95,el=(performance.now()-t0)/1000;$('#eBar')&&($('#eBar').style.width=(p*100)+'%',$('#ePct').textContent=Math.round(p*100)+'%',
         $('#eTxt').textContent=`Frame ${i}/${N} · ${(i/fps/Math.max(.01,el)).toFixed(1)}× speed`);$('#eBar').parentElement.setAttribute('aria-valuenow',String(Math.round(p*100)));await yieldUI()}
     }
     if(!expCancel&&!err){await venc.flush();if(aenc)await aenc.flush();mux.finalize()}
