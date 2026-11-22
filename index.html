@@ -442,7 +442,10 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   .tscroll { min-width:0; overflow-x:auto; overscroll-behavior-x:contain; }
   .grip { height:9px; min-height:9px; touch-action:pan-y; }
   /* Keep custom timeline clip/trim and height-resize gestures from being hijacked by browser panning. */
-  .clip, .clip .h, .grip { touch-action:none; }
+  /* Let a one-finger horizontal swipe scroll the timeline even when it starts on a clip.
+     Trim handles remain custom-drag surfaces; clip movement still works with mouse/pen. */
+  .clip { touch-action:pan-x; }
+  .clip .h, .grip { touch-action:none; }
   /* Make trim handles reliably tappable on narrow touch screens. */
   .clip .h { width:18px; }
   .clip .h::after, .clip.sel .h::after { width:3px; height:22px; opacity:1; }
