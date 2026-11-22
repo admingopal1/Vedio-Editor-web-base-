@@ -429,11 +429,17 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
     padding:6px;
     border-radius:10px;
   }
-  .tp { width:34px; height:36px; min-width:34px; }
-  .tp.play { width:38px; height:38px; min-width:38px; }
-  .tc { font-size:11px; white-space:nowrap; margin-left:auto; }
-  .scrub { flex:1 1 100%; order:30; min-width:100%; height:8px; margin:2px 2px 4px; }
-  .scrub .kn { width:16px; height:16px; }
+  .tp { width:42px; height:42px; min-width:42px; min-height:42px; border-radius:11px; touch-action:manipulation; }
+  .tp .i { width:17px; height:17px; }
+  .tp.play { width:46px; height:46px; min-width:46px; min-height:46px; }
+  .tp.play .i { width:21px; height:21px; }
+  .tp:active { transform:scale(.94); background:var(--panel3); }
+  .tp.play:active { transform:scale(.96); }
+  .tp:focus-visible { outline:2px solid var(--acc2); outline-offset:2px; }
+  .tc { font-size:11px; white-space:nowrap; margin-left:auto; font-variant-numeric:tabular-nums; }
+  .scrub { flex:1 1 100%; order:30; min-width:100%; height:10px; margin:3px 2px 5px; touch-action:pan-x; }
+  .scrub .kn { width:19px; height:19px; border:2px solid var(--panel); }
+  .scrub:focus-visible { outline:2px solid var(--acc2); outline-offset:4px; }
   .transport > div:has(#master) { display:none !important; }
   .tl {
     height:clamp(160px,28svh,205px);
