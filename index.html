@@ -495,7 +495,13 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   .tp { width:32px; min-width:32px; }
   .tp.play { width:36px; min-width:36px; }
   .tl { height:178px; min-height:178px; }
-  .heads { width:78px; }
+  /* Keep all five track actions visible and comfortably tappable on narrow phones. */
+  .heads { width:104px; }
+  .thead { padding-inline:5px; }
+  .thead .tn { font-size:9px; }
+  .thead .ta { grid-template-columns:repeat(5,minmax(0,1fr)); gap:2px; }
+  .thead .mini { min-height:34px; height:34px; }
+  .thead .mini .i { width:12px; height:12px; }
 }
 @media (max-height: 650px) and (max-width: 700px) {
   #app { min-height:500px; }
