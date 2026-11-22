@@ -4174,6 +4174,8 @@ async function startWC(fps,q){
   const W=expCfg.w,Hh=expCfg.h,sr=AC.sampleRate;let vc=WCAVC;
   if(vc.startsWith('avc')&&Math.max(W,Hh)>2560)vc='avc1.640033';
   let ac=null;for(const c of['mp4a.40.2','opus']){try{const r=await AudioEncoder.isConfigSupported({codec:c,sampleRate:sr,numberOfChannels:2,bitrate:192000});if(r.supported){ac=c;break}}catch(e){}}
+  const hasAudio=allClips().some(c=>(c.type==='audio'||c.type==='video')&&c.volume>0&&!c.muted&&trackOf(c)&&!tmute(trackOf(c)));
+  if(hasAudio&&!ac){fallbackToWebM(fps,q,new Error('No supported MP4 audio encoder'));return}
   const mux=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),video:{codec:vc.startsWith('avc')?'avc':'vp9',width:W,height:Hh},
     ...(ac?{audio:{codec:ac==='opus'?'opus':'aac',numberOfChannels:2,sampleRate:sr}}:{}),fastStart:'in-memory',firstTimestampBehavior:'offset'});
   let wcErr=null;
