@@ -3903,10 +3903,11 @@ async function startWC(fps,q){
   let ac=null;for(const c of['mp4a.40.2','opus']){try{const r=await AudioEncoder.isConfigSupported({codec:c,sampleRate:sr,numberOfChannels:2,bitrate:192000});if(r.supported){ac=c;break}}catch(e){}}
   const mux=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),video:{codec:vc.startsWith('avc')?'avc':'vp9',width:W,height:Hh},
     ...(ac?{audio:{codec:ac==='opus'?'opus':'aac',numberOfChannels:2,sampleRate:sr}}:{}),fastStart:'in-memory',firstTimestampBehavior:'offset'});
-  const venc=new VideoEncoder({output:(c,m)=>mux.addVideoChunk(c,m),error:e=>console.error(e)});venc.configure({codec:vc,width:W,height:Hh,bitrate:q,framerate:fps});
-  let aenc=null;if(ac){aenc=new AudioEncoder({output:(c,m)=>mux.addAudioChunk(c,m),error:e=>console.error(e)});aenc.configure({codec:ac,sampleRate:sr,numberOfChannels:2,bitrate:192000})}
+  let wcErr=null;
+  const venc=new VideoEncoder({output:(c,m)=>mux.addVideoChunk(c,m),error:e=>{wcErr=e;console.error('MP4 video encoder error',e)}});venc.configure({codec:vc,width:W,height:Hh,bitrate:q,framerate:fps});
+  let aenc=null;if(ac){aenc=new AudioEncoder({output:(c,m)=>mux.addAudioChunk(c,m),error:e=>{wcErr=e;console.error('MP4 audio encoder error',e)}});aenc.configure({codec:ac,sampleRate:sr,numberOfChannels:2,bitrate:192000})}
   const sp=AC.createScriptProcessor(4096,2,2);MASTER.connect(sp);sp.connect(AC.destination);
-  WC={mux,venc,aenc,sp,fps,t0:performance.now(),last:-1e9,n:0,an:0,a0:null};
+  WC={mux,venc,aenc,sp,fps,t0:performance.now(),last:-1e9,n:0,an:0,a0:null,getError:()=>wcErr};
   sp.onaudioprocess=e=>{const w=WC;if(!w||!w.aenc)return;const L=e.inputBuffer.getChannelData(0),R=e.inputBuffer.numberOfChannels>1?e.inputBuffer.getChannelData(1):L,n=L.length,d=new Float32Array(n*2);
     d.set(L,0);d.set(R,n);if(w.a0===null)w.a0=Math.round((performance.now()-w.t0)*1000-n*1e6/sr);
     w.aenc.encode(new AudioData({format:'f32-planar',sampleRate:sr,numberOfFrames:n,numberOfChannels:2,timestamp:Math.max(0,w.a0)+Math.round(w.an*1e6/sr),data:d}));w.an+=n};
@@ -3924,8 +3925,15 @@ async function wcEnd(){const w=WC;if(!w)return;WC=null;
   S.exporting=false;S.playing=false;try{pause()}catch(e){}
   try{$('#vtag').innerHTML=`<span id="vtagTxt">${S.project.w} × ${S.project.h} · ${S.project.fps}fps</span>`;sizeCanvas()}catch(e){}
   if(expCancel){try{w.venc.close();w.aenc&&w.aenc.close()}catch(e){}closeModal('mExport');toast('Render cancelled','info');return}
-  try{await w.venc.flush();if(w.aenc)await w.aenc.flush();w.mux.finalize();showResult(new Blob([w.mux.target.buffer],{type:'video/mp4'}),'mp4')}
-  catch(e){console.error(e);toast('MP4 export failed – please use WebM','info');closeModal('mExport')}}
+  try{
+    await w.venc.flush();if(w.aenc)await w.aenc.flush();
+    if(w.getError&&w.getError())throw w.getError();
+    w.mux.finalize();showResult(new Blob([w.mux.target.buffer],{type:'video/mp4'}),'mp4');
+  }catch(e){
+    try{w.venc.close();w.aenc&&w.aenc.close()}catch(_e){}
+    console.error('MP4 finalization failed',e);
+    toast('MP4 export failed – try WebM or a lower resolution','err');closeModal('mExport');
+  }}
 function exportTick(){
   const p=clamp(S.time/Math.max(.01,S.duration),0,1);
   const bar=$('#eBar'); if(bar){bar.style.width=(p*100)+'%';$('#ePct').textContent=Math.round(p*100)+'%';
