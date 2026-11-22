@@ -436,8 +436,8 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   .scrub .kn { width:16px; height:16px; }
   .transport > div:has(#master) { display:none !important; }
   .tl {
-    height:190px;
-    min-height:190px;
+    height:clamp(160px,28svh,205px);
+    min-height:160px;
     max-height:34svh;
     margin:0 5px 5px;
     min-width:0;
@@ -517,7 +517,7 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   .transport { gap:3px; }
   .tp { width:32px; min-width:32px; }
   .tp.play { width:36px; min-width:36px; }
-  .tl { height:178px; min-height:178px; }
+  .tl { height:clamp(150px,28svh,185px); min-height:150px; }
   /* Keep all five track actions visible and comfortably tappable on narrow phones. */
   .heads { width:104px; }
   .thead { padding-inline:5px; }
@@ -527,8 +527,9 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   .thead .mini .i { width:12px; height:12px; }
 }
 @media (max-height: 650px) and (max-width: 700px) {
-  #app { min-height:500px; }
-  .tl { height:160px; min-height:160px; }
+  #app { min-height:0; grid-template-rows:54px minmax(150px,1fr) auto auto; }
+  .viewer { min-height:140px; }
+  .tl { height:clamp(132px,26svh,160px); min-height:132px; max-height:30svh; }
   .panel.left, .panel.right { bottom:calc(175px + env(safe-area-inset-bottom)); }
 }
 @media (prefers-reduced-motion: reduce) {
