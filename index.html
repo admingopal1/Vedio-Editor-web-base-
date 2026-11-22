@@ -363,6 +363,125 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   .panel.left,.panel.right{width:min(300px,88vw);box-shadow:0 0 0 100vmax rgba(0,0,0,.45),var(--sh)}
   .tl{margin:0 4px 4px}.workspace{padding:4px}
 }
+
+/* ---------- Mobile editor layout and touch ergonomics ---------- */
+@media (max-width: 700px) {
+  html, body { min-height:100%; height:auto; }
+  body { overflow-x:hidden; }
+  #app {
+    height:100svh;
+    min-height:560px;
+    grid-template-rows:54px minmax(250px,1fr) auto auto;
+  }
+  .topbar {
+    height:54px;
+    min-height:54px;
+    padding:0 8px;
+    gap:5px;
+    overscroll-behavior-x:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .logo { gap:6px; font-size:13px; padding-right:2px; }
+  .logo .mark { width:27px; height:27px; }
+  .logo .mark::after { animation:none; }
+  .badge { font-size:8px; padding:3px 5px; }
+  .topbar .tbtn { min-height:40px; padding:7px 9px; }
+  .topbar .tbtn.prim { padding-inline:12px; }
+  .workspace {
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr);
+    min-width:0;
+    min-height:0;
+    padding:5px;
+    gap:0;
+  }
+  .center { min-width:0; min-height:0; gap:5px; }
+  .viewer {
+    min-width:0;
+    min-height:180px;
+    border-radius:10px;
+    contain:layout paint;
+  }
+  .stage-wrap { padding:8px; min-width:0; min-height:0; }
+  .stage { max-width:100%; max-height:100%; }
+  #cv { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; }
+  .vtag { top:7px; left:7px; font-size:9px; padding:4px 7px; }
+  .transport {
+    flex:0 0 auto;
+    min-width:0;
+    flex-wrap:wrap;
+    gap:4px;
+    padding:6px;
+    border-radius:10px;
+  }
+  .tp { width:34px; height:36px; min-width:34px; }
+  .tp.play { width:38px; height:38px; min-width:38px; }
+  .tc { font-size:11px; white-space:nowrap; margin-left:auto; }
+  .scrub { flex:1 1 100%; order:30; min-width:100%; height:8px; margin:2px 2px 4px; }
+  .scrub .kn { width:16px; height:16px; }
+  .transport > div:has(#master) { display:none !important; }
+  .tl {
+    height:190px;
+    min-height:190px;
+    max-height:34svh;
+    margin:0 5px 5px;
+    min-width:0;
+  }
+  .tlbar { min-height:48px; padding:4px 6px; gap:3px; }
+  .tb { min-height:38px; padding:6px 9px; font-size:11px; }
+  .tlbody { min-height:0; }
+  .heads { width:88px; }
+  .thead { padding:6px 5px; }
+  .thead .tn { font-size:10px; }
+  .tscroll { min-width:0; overflow-x:auto; overscroll-behavior-x:contain; }
+  .grip { height:9px; min-height:9px; touch-action:pan-y; }
+  .panel.left, .panel.right {
+    position:fixed;
+    z-index:120;
+    top:59px;
+    bottom:calc(205px + env(safe-area-inset-bottom));
+    width:min(340px, calc(100vw - 16px));
+    max-height:none;
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .panel.left { left:8px; right:auto; }
+  .panel.right { right:8px; left:auto; }
+  .tabs { gap:3px; padding:6px; }
+  .tab { min-width:58px; min-height:48px; padding:7px 8px; }
+  .pbody, .ibody { overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+  .itabs { min-height:42px; }
+  .itab { min-height:34px; padding:8px 10px; }
+  .modal { padding:10px; align-items:end; }
+  .mbox { width:100%; max-width:560px; max-height:88svh; border-radius:16px 16px 12px 12px; }
+  .mbody { padding:15px; }
+  .mhead { padding:14px 15px; }
+  .mfoot { padding:12px 15px; }
+  .toasts { bottom:calc(10px + env(safe-area-inset-bottom)); width:calc(100% - 24px); }
+  .toast { max-width:100%; }
+  .tip { display:none; }
+  .mcard, .listitem, .fx, .txprev { transition:none; }
+  .mcard:hover, .listitem:hover, .fx:hover { transform:none; }
+}
+@media (max-width: 390px) {
+  .logo { font-size:12px; }
+  .topbar .tbtn { padding-inline:7px; }
+  .transport { gap:3px; }
+  .tp { width:32px; min-width:32px; }
+  .tp.play { width:36px; min-width:36px; }
+  .tl { height:178px; min-height:178px; }
+  .heads { width:78px; }
+}
+@media (max-height: 650px) and (max-width: 700px) {
+  #app { min-height:500px; }
+  .tl { height:160px; min-height:160px; }
+  .panel.left, .panel.right { bottom:calc(175px + env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo .mark::after { animation:none !important; }
+}
+
 </style>
 </head>
 <body>
