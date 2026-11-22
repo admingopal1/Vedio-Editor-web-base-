@@ -2759,6 +2759,7 @@ function elOf(c){
 function prune(){ const ids=new Set(allClips().map(c=>c.id));
   for(const [id,el] of EL){ if(!ids.has(id)){
     try{el.pause();}catch(e){}
+    try{if(el._prewarmHandler){el.removeEventListener('loadedmetadata',el._prewarmHandler);el._prewarmHandler=null;}}catch(e){}
     try{if(el._gain){el._gain.disconnect();el._gain=null;}}catch(e){}
     // Release this clip's decoder/buffer; elOf() can recreate it from the library URL.
     try{el.removeAttribute('src');el.load();}catch(e){}
@@ -3174,16 +3175,20 @@ function syncMedia(){
 function prewarmAhead(){
   if(!S.playing)return;
   const t=S.time,horizon=Math.max(.75,Math.min(2.5,1.5*S.rate));
-  for(const tr of S.tracks)for(const c of tr.clips){
-    if(c.type!=='video'||c.rev||c.start<=t+.03||c.start>t+horizon)continue;
+  // Bound decoder prewarming: warming every stacked clip can exhaust memory on complex timelines.
+  const upcoming=S.tracks.flatMap(tr=>tr.clips)
+    .filter(c=>c.type==='video'&&!c.rev&&c.start>t+.03&&c.start<=t+horizon)
+    .sort((a,b)=>a.start-b.start).slice(0,3);
+  for(const c of upcoming){
     const el=elOf(c);if(!el||el._prewarmDone)continue;
     const warm=()=>{
-      if(el._prewarmDone)return;
+      el._prewarmHandler=null;
+      if(el._prewarmDone||!S.playing||!findClip(c.id))return;
       el._prewarmDone=true;
       try{if(el.readyState>=1&&Math.abs(el.currentTime-c.in)>.05)el.currentTime=c.in}catch(e){}
     };
     if(el.readyState>=1)warm();
-    else el.addEventListener('loadedmetadata',warm,{once:true});
+    else{el._prewarmHandler=warm;el.addEventListener('loadedmetadata',warm,{once:true});}
   }
 }
 
