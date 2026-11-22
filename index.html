@@ -712,8 +712,8 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
 </div>
 
 <div class="dropfull" id="dropfull"><div class="bx"><svg class="i"><use href="#i-upload"/></svg><h2>Drop to import</h2><p style="color:var(--dim)">Video · Images · Audio</p></div></div>
-<div class="modal" id="mExport"><div class="mbox">
-  <div class="mhead"><div class="ic"><svg class="i"><use href="#i-download"/></svg></div><div><h3>Export video</h3><p>Rendered in real time — keep this tab focused</p></div></div>
+<div class="modal" id="mExport" role="dialog" aria-modal="true" aria-labelledby="mExportTitle"><div class="mbox" tabindex="-1">
+  <div class="mhead"><div class="ic"><svg class="i"><use href="#i-download"/></svg></div><div><h3 id="mExportTitle">Export video</h3><p>Rendered in real time — keep this tab focused</p></div></div>
   <div class="mbody" id="expBody"></div>
   <div class="mfoot" id="expFoot"></div>
 </div></div>
@@ -4526,10 +4526,31 @@ function toast(msg,kind='info',ms=2400){
   if(ms)setTimeout(close,ms);
   return {close};
 }
-function openModal(id){$('#'+id).classList.add('on')}
-function closeModal(id){$('#'+id).classList.remove('on')}
+let exportReturnFocus=null;
+function openModal(id){
+  const modal=$('#'+id);
+  if(id==='mExport')exportReturnFocus=document.activeElement;
+  modal.classList.add('on');
+  if(id==='mExport')requestAnimationFrame(()=>{const first=modal.querySelector('#eRes')||modal.querySelector('.mbox');first&&first.focus()});
+}
+function closeModal(id){
+  $('#'+id).classList.remove('on');
+  if(id==='mExport'&&exportReturnFocus&&exportReturnFocus.isConnected){
+    const target=exportReturnFocus;exportReturnFocus=null;
+    requestAnimationFrame(()=>target.focus());
+  }
+}
+$('#mExport').addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&!S.exporting){e.preventDefault();e.stopPropagation();closeModal('mExport');return}
+  if(e.key!=='Tab')return;
+  const modal=$('#mExport'),items=[...modal.querySelectorAll('button:not([disabled]),select:not([disabled]),input:not([disabled]),video[controls], [tabindex]:not([tabindex="-1"])')].filter(el=>el.offsetWidth||el.offsetHeight||el===document.activeElement);
+  if(!items.length){e.preventDefault();modal.querySelector('.mbox').focus();return}
+  const first=items[0],last=items[items.length-1];
+  if(e.shiftKey&&(document.activeElement===first||!modal.contains(document.activeElement))){e.preventDefault();last.focus()}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+});
 window.closeModal=closeModal;
-$$('.modal').forEach(m=>m.addEventListener('pointerdown',e=>{if(e.target===m&&!S.exporting)m.classList.remove('on')}));
+$('.modal').forEach(m=>m.addEventListener('pointerdown',e=>{if(e.target===m&&!S.exporting){if(m.id==='mExport')closeModal('mExport');else m.classList.remove('on')}}));
 function openCtx(x,y,items){
   const c=$('#ctx');
   c.innerHTML=items.map(it=>it==='-'?'<hr>':`<button>${icon(it[0])}${it[1]}<span>${it[2]||''}</span></button>`).join('');
