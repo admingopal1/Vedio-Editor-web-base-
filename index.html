@@ -4198,10 +4198,25 @@ function closeGaps(){let moved=0;const snapS=snap();
   push(snapS);calcDur();syncAll();toast('Closed '+moved+' gap'+(moved>1?'s':''),'ok')}
 $('#bGaps').onclick=closeGaps;
 addEventListener('keydown',e=>{if(e.key==='G'&&e.shiftKey&&!/INPUT|TEXTAREA|SELECT/.test((e.target.tagName||'')))closeGaps()});
-(()=>{const ts=$('#tscroll');let d0=0,z0=0;const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
-  ts.addEventListener('touchstart',e=>{if(e.touches.length===2){d0=dist(e.touches);z0=S.zoom}},{passive:true});
-  ts.addEventListener('touchmove',e=>{if(e.touches.length===2&&d0>0){e.preventDefault();S.zoom=clamp(z0*dist(e.touches)/d0,8,400);$('#zoo').value=S.zoom;renderTimeline()}},{passive:false});
-  ts.addEventListener('touchend',()=>{d0=0},{passive:true})})();
+(()=>{const ts=$('#tscroll');let d0=0,z0=0,anchorTime=0;const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+  ts.addEventListener('touchstart',e=>{
+    if(e.touches.length===2){
+      const rect=ts.getBoundingClientRect(),mid=(e.touches[0].clientX+e.touches[1].clientX)/2;
+      d0=dist(e.touches);z0=S.zoom;
+      anchorTime=(ts.scrollLeft+mid-rect.left)/Math.max(8,S.zoom);
+    }
+  },{passive:true});
+  ts.addEventListener('touchmove',e=>{
+    if(e.touches.length===2&&d0>0){
+      e.preventDefault();
+      const rect=ts.getBoundingClientRect(),mid=(e.touches[0].clientX+e.touches[1].clientX)/2;
+      setTimelineZoom(z0*dist(e.touches)/d0,mid-rect.left,anchorTime);
+    }
+  },{passive:false});
+  const reset=()=>{d0=0};
+  ts.addEventListener('touchend',e=>{if(e.touches.length<2)reset()},{passive:true});
+  ts.addEventListener('touchcancel',reset,{passive:true});
+})();
 
 /* ============================================================================
    MULTI-SELECT: Shift/Ctrl+click to add, Ctrl+A select all, group move/delete/duplicate/copy/paste
@@ -4465,13 +4480,13 @@ $('#bMark').onclick=()=>{push();S.markers.push(num(S.time,2));renderTimeline();t
 $('#bSnapT').onclick=e=>{S.snap=!S.snap;e.currentTarget.classList.toggle('on',S.snap)};
 $('#bRipple').onclick=e=>{S.ripple=!S.ripple;e.currentTarget.classList.toggle('on',S.ripple)};
 /* Keep the same timeline moment under the viewport center while zooming. */
-function setTimelineZoom(next){
-  const sc=$('#tscroll'), anchor=sc.clientWidth/2;
-  const timeAtAnchor=(sc.scrollLeft+anchor)/Math.max(8,S.zoom);
+function setTimelineZoom(next,anchorX,anchorTime){
+  const sc=$('#tscroll'), anchor=Number.isFinite(anchorX)?anchorX:sc.clientWidth/2;
+  const time=Number.isFinite(anchorTime)?anchorTime:(sc.scrollLeft+anchor)/Math.max(8,S.zoom);
   S.zoom=clamp(next,8,400);
   $('#zoo').value=S.zoom;
   renderTimeline();
-  sc.scrollLeft=Math.max(0,timeAtAnchor*S.zoom-anchor);
+  sc.scrollLeft=Math.max(0,time*S.zoom-anchor);
 }
 $('#zoo').oninput=e=>setTimelineZoom(+e.target.value);
 $('#bZI').onclick=()=>setTimelineZoom(S.zoom*1.3);
