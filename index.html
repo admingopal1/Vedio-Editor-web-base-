@@ -3959,21 +3959,21 @@ function openExport(){
   if(!allClips().length)return toast('Add something to the timeline first','info');
   const ms=mimes();
   $('#expBody').innerHTML=`
-    <div class="frow"><label>Resolution</label><div><select class="f" id="eRes">
+    <div class="frow"><label for="eRes">Resolution</label><div><select class="f" id="eRes">
       ${[[720,'720p HD'],[1080,'1080p Full HD'],[1440,'1440p QHD'],[2160,'2160p 4K']].map(([v,n])=>`<option value="${v}"${v===1080?' selected':''}>${n}</option>`).join('')}
     </select></div></div>
-    <div class="frow"><label>Frame rate</label><div><select class="f" id="eFps">${[24,25,30,60].map(v=>`<option value="${v}"${v===S.project.fps?' selected':''}>${v} fps</option>`).join('')}</select></div></div>
-    <div class="frow"><label>Format</label><div><select class="f" id="eFmt">
+    <div class="frow"><label for="eFps">Frame rate</label><div><select class="f" id="eFps">${[24,25,30,60].map(v=>`<option value="${v}"${v===S.project.fps?' selected':''}>${v} fps</option>`).join('')}</select></div></div>
+    <div class="frow"><label for="eFmt">Format</label><div><select class="f" id="eFmt">
       ${(ms.some(m=>m.startsWith('video/mp4'))||offMode()||wcMode())?'<option value="mp4" selected>MP4 (H.264)</option>':''}
       <option value="webm">WebM (VP9)</option><option value="wav">Audio only (WAV)</option></select></div></div>
-    <div class="frow"><label>Quality</label><div><select class="f" id="eQ">
+    <div class="frow"><label for="eQ">Quality</label><div><select class="f" id="eQ">
       <option value="6">Draft · 6 Mbps</option><option value="12" selected>High · 12 Mbps</option>
       <option value="24">Ultra · 24 Mbps</option><option value="45">Master · 45 Mbps</option></select></div></div>
     <div class="frow"><label>Range</label><div style="color:var(--dim);font-size:12px">Full timeline · <b style="color:var(--txt)">${tc(S.duration)}</b> (${Math.ceil(S.duration*S.project.fps)} frames)</div></div>
     <div style="background:rgba(255,176,32,.1);border:1px solid rgba(255,176,32,.3);border-radius:10px;padding:11px;color:#ffd489;font-size:11.5px">
       <span id="eNote"></span></div>
-    <div id="eProg" style="display:none"><div class="prog"><i id="eBar"></i></div>
-      <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--dim)"><span id="eTxt">Rendering…</span><span id="ePct">0%</span></div></div>`;
+    <div id="eProg" style="display:none"><div class="prog" role="progressbar" aria-label="Video export progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="eBar"></i></div>
+      <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--dim)"><span id="eTxt" role="status" aria-live="polite" aria-atomic="true">Rendering…</span><span id="ePct">0%</span></div></div>`;
   $('#expFoot').innerHTML=`<button class="btn" style="width:auto;padding:9px 16px" onclick="closeModal('mExport')">Cancel</button>
     <button class="btn acc" style="width:auto;padding:9px 20px" id="eGo">${icon('download')}Start render</button>`;
   $('#eGo').onclick=()=>$('#eFmt').value==='wav'?exportWav():startExport();
@@ -4079,7 +4079,7 @@ function markExportCancelling(){
 function exportTick(){
   const p=clamp(S.time/Math.max(.01,S.duration),0,1);
   const bar=$('#eBar'); if(bar){bar.style.width=(p*100)+'%';$('#ePct').textContent=Math.round(p*100)+'%';
-    $('#eTxt').textContent=`Rendering ${tc(S.time)} / ${tc(S.duration)}`;}
+    $('#eTxt').textContent=`Rendering ${tc(S.time)} / ${tc(S.duration)}`;bar.parentElement.setAttribute('aria-valuenow',String(Math.round(p*100)));}
 }
 function finishExport(){ pause(); if(WC){setTimeout(wcEnd,260);return} setTimeout(()=>{try{REC&&REC.state!=='inactive'&&REC.stop()}catch(e){}},260); }
 
@@ -4161,7 +4161,7 @@ async function startOffline(fps,q){
       const vf=new VideoFrame(cv,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps)});venc.encode(vf,{keyFrame:i%(fps*2)===0});vf.close();
       if(venc.encodeQueueSize>12)await new Promise(r=>venc.addEventListener('dequeue',r,{once:true}));
       if(i%4===0){const p=i/N,el=(performance.now()-t0)/1000;$('#eBar')&&($('#eBar').style.width=(p*100)+'%',$('#ePct').textContent=Math.round(p*100)+'%',
-        $('#eTxt').textContent=`Frame ${i}/${N} · ${(i/fps/Math.max(.01,el)).toFixed(1)}× speed`);await yieldUI()}
+        $('#eTxt').textContent=`Frame ${i}/${N} · ${(i/fps/Math.max(.01,el)).toFixed(1)}× speed`);$('#eBar').parentElement.setAttribute('aria-valuenow',String(Math.round(p*100)));await yieldUI()}
     }
     if(!expCancel&&!err){await venc.flush();if(aenc)await aenc.flush();mux.finalize()}
   }catch(e){err=e;console.error(e)}
