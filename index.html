@@ -4439,12 +4439,35 @@ $('#bZI').onclick=()=>{S.zoom=clamp(S.zoom*1.3,8,400);$('#zoo').value=S.zoom;ren
 $('#bZO').onclick=()=>{S.zoom=clamp(S.zoom/1.3,8,400);$('#zoo').value=S.zoom;renderTimeline()};
 $('#bFit').onclick=()=>{S.zoom=clamp(($('#tscroll').clientWidth-40)/Math.max(6,S.duration||10),8,400);$('#zoo').value=S.zoom;renderTimeline()};
 $('#bHelp').onclick=()=>openModal('mHelp');
-/* timeline resize */
+/* Timeline resize: keep the gesture stable and always release listeners on cancel. */
 $('#grip').addEventListener('pointerdown',e=>{
-  const y=e.clientY,h0=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tlh'));
-  const mv=ev=>document.documentElement.style.setProperty('--tlh',clamp(h0-(ev.clientY-y),140,innerHeight*.6)+'px');
-  const up=()=>{document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);fitStage()};
-  document.addEventListener('pointermove',mv);document.addEventListener('pointerup',up);
+  if(e.button!==undefined&&e.button!==0)return;
+  e.preventDefault();
+  const grip=e.currentTarget, pointerId=e.pointerId, y=e.clientY;
+  const rawH=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tlh'));
+  const h0=Number.isFinite(rawH)?rawH:215;
+  let finished=false;
+  const cleanup=()=>{
+    if(finished)return;
+    finished=true;
+    document.removeEventListener('pointermove',mv);
+    document.removeEventListener('pointerup',up);
+    document.removeEventListener('pointercancel',up);
+    grip.removeEventListener('lostpointercapture',lost);
+    try{if(grip.hasPointerCapture(pointerId))grip.releasePointerCapture(pointerId)}catch(_){}
+    fitStage();
+  };
+  const mv=ev=>{
+    if(ev.pointerId!==pointerId)return;
+    document.documentElement.style.setProperty('--tlh',clamp(h0-(ev.clientY-y),140,innerHeight*.6)+'px');
+  };
+  const up=ev=>{if(ev.pointerId===pointerId)cleanup()};
+  const lost=ev=>{if(ev.pointerId===pointerId)cleanup()};
+  document.addEventListener('pointermove',mv);
+  document.addEventListener('pointerup',up);
+  document.addEventListener('pointercancel',up);
+  grip.addEventListener('lostpointercapture',lost);
+  try{grip.setPointerCapture(pointerId)}catch(_){}
 });
 /* global drop */
 let dc=0;
