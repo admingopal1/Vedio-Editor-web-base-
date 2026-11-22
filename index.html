@@ -456,12 +456,15 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
      Trim handles remain custom-drag surfaces; clip movement still works with mouse/pen. */
   .clip { touch-action:pan-x; }
   /* Dedicated move handle: clip body remains available for horizontal timeline swipes. */
-  .clip .move-grip { display:flex; position:absolute; z-index:5; top:2px; left:50%; transform:translateX(-50%); width:30px; height:19px; align-items:center; justify-content:center; gap:3px; border-radius:6px; background:rgba(8,12,22,.72); touch-action:none; }
-  .clip .move-grip i { display:block; width:2px; height:8px; border-radius:2px; background:rgba(255,255,255,.9); }
+  .clip .move-grip { display:flex; position:absolute; z-index:5; top:2px; left:50%; transform:translateX(-50%); width:34px; height:23px; align-items:center; justify-content:center; gap:4px; border:1px solid rgba(255,255,255,.42); border-radius:7px; background:rgba(5,10,20,.94); box-shadow:0 2px 7px rgba(0,0,0,.65); touch-action:none; }
+  .clip .move-grip i { display:block; width:2px; height:10px; border-radius:2px; background:#fff; }
+  .clip.sel .move-grip { border-color:rgba(34,211,238,.9); background:rgba(5,22,32,.96); }
+  .clip .move-grip:active { background:rgba(34,211,238,.32); }
   .clip .h, .grip { touch-action:none; }
-  /* Make trim handles reliably tappable on narrow touch screens. */
+  /* Keep trim hit areas easy to grab while preserving room on short clips. */
   .clip .h { width:18px; }
-  .clip .h::after, .clip.sel .h::after { width:3px; height:22px; opacity:1; }
+  .clip .h::after, .clip.sel .h::after { width:4px; height:26px; opacity:1; }
+  .clip .h:active::after { background:#22d3ee; box-shadow:0 0 7px rgba(34,211,238,.9); }
   .clip .lb { left:9px; right:9px; font-size:10px; }
   .clip.sel{box-shadow:0 0 0 2px rgba(34,211,238,.72),0 3px 12px rgba(0,0,0,.55)}
   .clip.sel::after{inset:2px;border-color:rgba(255,255,255,.38)}
