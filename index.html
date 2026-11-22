@@ -252,7 +252,7 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
 .tb:disabled{opacity:.72;cursor:not-allowed}
 .tlbody{flex:1;display:flex;min-height:0;position:relative}
 .heads{width:132px;flex:none;border-right:1px solid var(--line);overflow:hidden;background:rgba(10,13,20,.6)}
-.heads-in{padding-top:26px}
+.heads-in{padding-top:26px;will-change:transform}
 .thead{height:64px;border-bottom:1px solid var(--line);padding:7px 8px;display:flex;flex-direction:column;justify-content:center;gap:5px}
 .thead.a{height:52px}
 .thead .tn{font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px}
@@ -3262,7 +3262,15 @@ function updPlayhead(){
   if(S.playing){ const sc=$('#tscroll');
     if(x<sc.scrollLeft+40||x>sc.scrollLeft+sc.clientWidth-80)sc.scrollLeft=x-sc.clientWidth*.35; }
 }
-$('#tscroll').addEventListener('scroll',()=>{ $('#headsIn').style.transform=`translateY(${-$('#tscroll').scrollTop}px)`; });
+/* Keep the fixed track-name column aligned with vertically scrolling tracks. */
+let headSyncFrame=0;
+$('#tscroll').addEventListener('scroll',()=>{
+  if(headSyncFrame)return;
+  headSyncFrame=requestAnimationFrame(()=>{
+    headSyncFrame=0;
+    $('#headsIn').style.transform=`translate3d(0,${-$('#tscroll').scrollTop}px,0)`;
+  });
+},{passive:true});
 
 /* ---------------- Timeline interaction ---------------- */
 let drag=null;
