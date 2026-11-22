@@ -155,6 +155,8 @@ button{background:none;border:none;cursor:pointer}
 .center{display:flex;flex-direction:column;gap:8px;min-height:0}
 .viewer{flex:1;position:relative;display:grid;place-items:center;min-height:0;overflow:hidden;
   background:radial-gradient(circle at 50% 40%,#12161f,#06070c 75%);border:1px solid var(--line);border-radius:var(--r)}
+.viewer:fullscreen{width:100vw;height:100vh;min-height:0;border:0;border-radius:0;background:#05060a}
+.viewer:fullscreen .stage-wrap{padding:12px}
 .stage{position:relative;line-height:0;box-shadow:0 20px 60px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
 #cv{display:block;max-width:100%;max-height:100%;background:#000}
 .stage-wrap{position:relative;display:grid;place-items:center;width:100%;height:100%;padding:16px}
@@ -2996,9 +2998,16 @@ function sizeCanvas(preview=true){
 }
 function fitStage(){
   const wrap=$('.stage-wrap'), st=$('#stage');
-  const aw=wrap.clientWidth-32, ah=wrap.clientHeight-32, ar=cv.width/cv.height;
-  let w=aw,h=w/ar; if(h>ah){h=ah;w=h*ar}
-  st.style.width=w+'px'; st.style.height=h+'px'; cv.style.width=w+'px'; cv.style.height=h+'px';
+  if(!wrap||!st||!cv.width||!cv.height)return;
+  const cs=getComputedStyle(wrap);
+  const aw=Math.max(0,wrap.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight));
+  const ah=Math.max(0,wrap.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom));
+  if(!aw||!ah)return;
+  const ar=cv.width/cv.height;
+  let w=aw,h=w/ar;
+  if(h>ah){h=ah;w=h*ar}
+  st.style.width=w+'px';st.style.height=h+'px';
+  cv.style.width=w+'px';cv.style.height=h+'px';
 }
 function filterStr(c,W){
   const a=c.adj,f=[];
@@ -4768,6 +4777,11 @@ document.addEventListener('keydown',e=>{
   }
 });
 window.addEventListener('resize',()=>{fitStage();renderTimeline()});
+document.addEventListener('fullscreenchange',()=>requestAnimationFrame(()=>{fitStage();render()}));
+if('ResizeObserver' in window){
+  const viewerObserver=new ResizeObserver(()=>fitStage());
+  viewerObserver.observe($('#viewer'));
+}
 
 /* ---------------- Boot ---------------- */
 S.tracks=[newTrack('visual','V2'),newTrack('visual','V1'),newTrack('audio','A1')];
