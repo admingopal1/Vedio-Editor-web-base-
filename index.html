@@ -3432,7 +3432,7 @@ $('#tracks').addEventListener('keydown',e=>{
   e.preventDefault();e.stopPropagation();
   const id=el.dataset.c,clip=findClip(id);
   if(!clip||trackOf(clip)?.locked)return;
-  if(e.shiftKey||e.ctrlKey||e.metaKey)toggleSel(id);
+  if(multiSelectMode||e.shiftKey||e.ctrlKey||e.metaKey)toggleSel(id);
   else{S.sel=id;clearMs()}
   renderTimeline();renderInspector();render();
   const next=$('#tracks').querySelector(`.clip[data-c="${CSS.escape(id)}"]`);
@@ -3511,10 +3511,19 @@ $('#tscroll').addEventListener('pointermove',e=>{
       let ns=clamp(drag.s+dx,minS,maxS); if(S.snap)ns=snapTime(ns,c,[0,S.time,...allClips().filter(x=>x.id!==c.id).flatMap(x=>[x.start,end(x)])]);
       ns=clamp(ns,minS,maxS); c.in=drag.i+(ns-drag.s)*c.speed; c.start=ns;
     }else{ const maxS=drag.s+drag.d-.1; let ns=clamp(drag.s+dx,0,maxS);
-      c.dur=drag.d-(ns-drag.s); c.start=ns; }
+      if(S.snap)ns=snapTime(ns,c,[0,S.time,...S.markers,...allClips().filter(x=>x.id!==c.id).flatMap(x=>[x.start,end(x)])]);
+      ns=clamp(ns,0,maxS);c.dur=drag.d-(ns-drag.s);c.start=ns; }
   }else{
-    if(isSrc){ const maxO=m?m.dur:1e9; c.out=clamp(drag.o+dx*c.speed,c.in+.1,maxO); }
-    else c.dur=Math.max(.1,drag.d+dx);
+    if(isSrc){
+      const maxO=m?m.dur:1e9;
+      let targetEnd=drag.s+Math.max(.1,drag.d+dx);
+      if(S.snap)targetEnd=snapPoint(targetEnd,[S.time,...S.markers,...allClips().filter(x=>x.id!==c.id).flatMap(x=>[x.start,end(x)])]);
+      c.out=clamp(drag.i+(targetEnd-drag.s)*c.speed,c.in+.1,maxO);
+    }else{
+      let targetEnd=drag.s+Math.max(.1,drag.d+dx);
+      if(S.snap)targetEnd=snapPoint(targetEnd,[S.time,...S.markers,...allClips().filter(x=>x.id!==c.id).flatMap(x=>[x.start,end(x)])]);
+      c.dur=Math.max(.1,targetEnd-drag.s);
+    }
   }
   const el=$(`[data-c="${c.id}"]`);
   if(el){ el.style.left=c.start*S.zoom+'px'; el.style.width=Math.max(6,dur(c)*S.zoom)+'px';
@@ -3543,11 +3552,16 @@ $('#tscroll').addEventListener('pointercancel',cancelDrag);
 document.addEventListener('pointerup',commitDrag);
 document.addEventListener('pointercancel',cancelDrag);
 document.addEventListener('lostpointercapture',cancelDrag);
+function snapPoint(t,cands){
+  const th=9/S.zoom;let best=t,bd=th;
+  for(const x of cands){const dd=Math.abs(t-x);if(dd<bd){bd=dd;best=x}}
+  return bd<th?best:t;
+}
 function snapTime(t,c,cands){
-  const th=9/S.zoom, d=dur(c); let best=t,bd=th;
+  const d=dur(c); let best=t,bd=9/S.zoom;
   for(const x of cands){ for(const [edge,off] of [[t,0],[t+d,d]]){
     const dd=Math.abs(edge-x); if(dd<bd){bd=dd;best=x-off;} } }
-  return bd<th?best:t;
+  return bd<9/S.zoom?best:t;
 }
 /* drop from library */
 $('#tscroll').addEventListener('dragover',e=>{e.preventDefault();
