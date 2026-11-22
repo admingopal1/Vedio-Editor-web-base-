@@ -3217,7 +3217,9 @@ function paintWave(el,c){
 }
 function updPlayhead(){
   const x=S.time*S.zoom;
-  $('#ph').style.left=x+'px'; $('#ph').style.height=$('#tinner').scrollHeight+'px';
+  const ph=$('#ph'), inner=$('#tinner');
+  const timelineHeight=inner.scrollHeight;
+  ph.style.left=x+'px'; ph.style.height=timelineHeight+'px';
   $('#tc').innerHTML=`${tc(S.time)} <small>/ ${tc(S.duration)}</small>`;
   const p=S.duration?clamp(S.time/S.duration,0,1):0;
   $('#scFill').style.width=(p*100)+'%'; $('#scKn').style.left=(p*100)+'%';
