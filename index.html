@@ -457,6 +457,11 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   .clip { touch-action:pan-x; }
   /* Dedicated move handle: clip body remains available for horizontal timeline swipes. */
   .clip .move-grip { display:flex; position:absolute; z-index:5; top:2px; left:50%; transform:translateX(-50%); width:34px; height:23px; align-items:center; justify-content:center; gap:4px; border:1px solid rgba(255,255,255,.42); border-radius:7px; background:rgba(5,10,20,.94); box-shadow:0 2px 7px rgba(0,0,0,.65); touch-action:none; }
+  /* Compact clips keep their move affordance inside the visible clip and avoid unreadable labels. */
+  .clip.tiny .lb span, .clip.tiny .lb em { display:none; }
+  .clip.tiny .lb { left:3px; right:3px; justify-content:center; }
+  .clip.tiny .move-grip { width:calc(100% - 4px); max-width:34px; height:20px; gap:2px; }
+  .clip.tiny .move-grip i { height:8px; }
   .clip .move-grip i { display:block; width:2px; height:10px; border-radius:2px; background:#fff; }
   .clip.sel .move-grip { border-color:rgba(34,211,238,.9); background:rgba(5,22,32,.96); }
   .clip .move-grip:active { background:rgba(34,211,238,.32); }
@@ -3317,7 +3322,7 @@ function renderTimeline(){
 }
 function clipHTML(c,t){
   const d=dur(c),w=Math.max(6,d*S.zoom),m=media(c.mediaId);
-  const cls=c.type==='video'?'v':c.type==='image'?'i':c.type==='audio'?'au':c.type==='text'?'t':'s';
+  const cls=(c.type==='video'?'v':c.type==='image'?'i':c.type==='audio'?'au':c.type==='text'?'t':'s')+(w<54?' tiny':'');
   let bg='';
   if(c.type==='video'&&m&&m.strip){
     const full=(m.dur/c.speed)*S.zoom;
