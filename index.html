@@ -3061,6 +3061,7 @@ function drawText(c,l,d,W,H,g,alpha,m){
   if(tx.anim==='bounce'){const p=clamp(l/.7,0,1);dy=-Math.abs(Math.sin(p*Math.PI*2.5))*Math.pow(1-p,1.4)*90*k;a*=clamp(l/.15,0,1)}
   if(tx.anim==='zoom'){const p=smooth(clamp(l/.5,0,1));sc=1.7-.7*p;a*=p}
   if(tx.anim==='type')chars=Math.floor(clamp(l/Math.min(1.8,d*.6),0,1)*tx.content.length);
+  if(tx.anim==='wipe') { const p=smooth(clamp(l/Math.min(.8,d*.35),0,1)); a*=p; }
   a*=clamp((d-l)/Math.min(.4,d/2),0,1);
   const size=tx.size*k*g.scale*m.sc;
   ctx.save();ctx.globalAlpha=clamp(a,0,1);
@@ -3076,10 +3077,19 @@ function drawText(c,l,d,W,H,g,alpha,m){
   const lh=size*1.22,th=lines.length*lh;
   let bw=0;lines.forEach(x=>bw=Math.max(bw,ctx.measureText(x).width));
   const pad=size*.35;
+  if(tx.anim==='wipe'){
+    const p=smooth(clamp(l/Math.min(.8,d*.35),0,1));
+    const left=tx.align==='center'?-bw/2:tx.align==='right'?-bw:0;
+    ctx.beginPath();ctx.rect(left-pad,-th/2-pad,bw*p+pad*2,th+pad*2);ctx.clip();
+  }
   if(tx.bg){ ctx.fillStyle=tx.bg;
     const bx=tx.align==='center'?-bw/2-pad:tx.align==='right'?-bw-pad:-pad;
     rr(ctx,bx,-th/2-pad*.6,bw+pad*2,th+pad*1.2,size*.18);ctx.fill(); }
-  if(tx.shadow>0){ctx.shadowColor=`rgba(0,0,0,${tx.shadow})`;ctx.shadowBlur=size*.28;ctx.shadowOffsetY=size*.05}
+  if(tx.shadow>0){
+    const glow=tx.anim==='glow';
+    ctx.shadowColor=glow?'#22d3ee':`rgba(0,0,0,${tx.shadow})`;
+    ctx.shadowBlur=size*(glow?(.22+.18*(.5+.5*Math.sin(l*5))):.28);ctx.shadowOffsetY=glow?0:size*.05;
+  }
   lines.forEach((ln,i)=>{
     const y=-th/2+lh*(i+.5);
     if(tx.stroke>0){ctx.lineWidth=tx.stroke*k;ctx.strokeStyle='#000';ctx.lineJoin='round';ctx.strokeText(ln,0,y)}
@@ -3688,7 +3698,7 @@ function inspHTML(c,tab){
       +sec('Style & animation','wand',
         `<label class="ctl"><span class="ctl-l">Background</span><input class="txtin" data-k="text.bg" value="${t.bg}" placeholder="transparent / #7c5cff / rgba(0,0,0,.5)"></label>`+
         R('Shadow','text.shadow',t.shadow,0,1,.01)+
-        S_('Entrance','text.anim',t.anim,[['none','None'],['fade','Fade'],['pop','Pop'],['slide','Slide up'],['bounce','Bounce'],['zoom','Zoom in'],['type','Typewriter']])+
+        S_('Entrance','text.anim',t.anim,[['none','None'],['fade','Fade'],['pop','Pop'],['slide','Slide up'],['bounce','Bounce'],['zoom','Zoom in'],['type','Typewriter'],['wipe','Wipe reveal'],['glow','Neon glow']])+
         `<div class="ptitle" style="margin:8px 0 6px">Quick styles</div><div class="chips">${TXPRE.map((p,i)=>`<button class="chip" data-txstyle="${i}">${p.n}</button>`).join('')}</div>`);
   }
   if(tab==='audio'){
