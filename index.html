@@ -525,7 +525,15 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   #mExport .frow select,#mExport .frow input{width:100%;min-height:44px;font-size:16px}
   #mExport .mfoot{position:sticky;bottom:0;z-index:2;padding:11px 12px calc(11px + env(safe-area-inset-bottom));background:var(--panel);gap:8px}
   #mExport .mfoot .btn{min-height:44px;flex:1;justify-content:center}
-  #mExport #expBody video{max-height:32vh}
+  #mExport #eProg{margin-top:16px}
+  #mExport #eProg .prog{height:11px;margin:12px 0 9px}
+  #mExport #eProg>div:last-child{display:flex;align-items:flex-start;gap:12px;line-height:1.4}
+  #mExport #eTxt{min-width:0;overflow-wrap:anywhere}
+  #mExport #ePct{flex:none;font-variant-numeric:tabular-nums;font-weight:700}
+  #mExport #expBody video{display:block;width:100%;height:auto;max-height:32vh;max-height:min(32dvh,260px);object-fit:contain}
+  #mExport #expBody p{overflow-wrap:anywhere}
+  #mExport #expFoot{flex-wrap:wrap}
+  #mExport #expFoot .btn{min-width:0}
 }
 </style>
 </head>
