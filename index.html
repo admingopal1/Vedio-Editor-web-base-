@@ -3156,6 +3156,23 @@ function syncMedia(){
   }
 }
 
+/* ---------------- Ahead-of-playhead media prewarm ---------------- */
+function prewarmAhead(){
+  if(!S.playing)return;
+  const t=S.time,horizon=Math.max(.75,Math.min(2.5,1.5*S.rate));
+  for(const tr of S.tracks)for(const c of tr.clips){
+    if(c.type!=='video'||c.rev||c.start<=t+.03||c.start>t+horizon)continue;
+    const el=elOf(c);if(!el||el._prewarmDone)continue;
+    const warm=()=>{
+      if(el._prewarmDone)return;
+      el._prewarmDone=true;
+      try{if(el.readyState>=1&&Math.abs(el.currentTime-c.in)>.05)el.currentTime=c.in}catch(e){}
+    };
+    if(el.readyState>=1)warm();
+    else el.addEventListener('loadedmetadata',warm,{once:true});
+  }
+}
+
 /* ---------------- Playback loop ---------------- */
 let last=performance.now();
 function loopFrame(now){
@@ -3173,7 +3190,7 @@ function loopFrame(now){
   // The preview canvas and playback UI do not need a 60fps redraw while paused.
   // Seeking and editing already call render()/updPlayhead() at the point of change.
   if(active){
-    if(!S.offline){syncMedia(); render();}
+    if(!S.offline){syncMedia();prewarmAhead();render();}
     if(WC)wcFrame();
     updPlayhead();
     vu();
