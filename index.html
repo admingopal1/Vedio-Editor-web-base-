@@ -6,6 +6,7 @@
 <meta name="description" content="Edit videos online with GOPISUNA VIDEO STUDIO, a browser-based video editor. Import media, arrange clips on a timeline, add text and effects, and create video projects in your browser.">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
 <link rel="canonical" href="https://vedio-editor-web-base-main.vercel.app/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="theme-color" content="#07080d">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="GOPISUNA VIDEO STUDIO">
@@ -421,7 +422,7 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
 <div id="app" role="main" aria-label="GOPISUNA Video Studio editor" tabindex="-1">
   <!-- ================= TOP BAR ================= -->
   <header class="topbar">
-    <div class="logo"><div class="mark"><svg class="i"><use href="#i-cut"/></svg></div>CutBox<span class="badge">STUDIO</span></div>
+    <div class="logo"><div class="mark"><svg class="i"><use href="#i-cut"/></svg></div>GOPISUNA<span class="badge">STUDIO</span></div>
     <input class="pname" id="pname" value="Untitled Project" spellcheck="false">
     <div class="divider"></div>
     <button class="tbtn" id="bImport" data-tip="Import media (Ctrl+I)"><svg class="i"><use href="#i-upload"/></svg>Import</button>
@@ -3398,7 +3399,7 @@ function paintMedia(){
   const q=($('#msearch')?.value||'').toLowerCase();
   const list=S.media.filter(m=>m.name.toLowerCase().includes(q));
   g.innerHTML=list.map(m=>`<div class="mcard" draggable="true" data-m="${m.id}" title="${m.name}">
-    ${m.thumb?`<img src="${m.thumb}">`:`<div class="ph">${icon(m.type==='audio'?'music':m.type==='image'?'image':'video')}</div>`}
+    ${m.thumb?`<img src="${m.thumb}" alt="Preview of ${m.name.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;")}" loading="lazy" decoding="async">`:`<div class="ph">${icon(m.type==='audio'?'music':m.type==='image'?'image':'video')}</div>`}
     <div class="ty">${icon(m.type==='audio'?'music':m.type==='image'?'image':'video')}</div>
     ${m.type!=='image'?`<div class="dur">${tc(m.dur).slice(0,5)}</div>`:''}
     <div class="nm">${m.name}</div><div class="add"><span>+ Add</span></div>
@@ -3873,7 +3874,7 @@ const idb=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=index
   return{put:(st,v,k)=>tx(st,'readwrite',s=>k===undefined?s.put(v):s.put(v,k)),get:(st,k)=>tx(st,'readonly',s=>s.get(k)),all:st=>tx(st,'readonly',s=>s.getAll()),
     keys:st=>tx(st,'readonly',s=>s.getAllKeys()),del:(st,k)=>tx(st,'readwrite',s=>s.delete(k)),clear:st=>tx(st,'readwrite',s=>s.clear())}})();
 let asReady=false,asLast='',asBusy=false;
-function asInd(t){let e=$('#saveInd');if(!e){e=document.createElement('span');e.id='saveInd';e.style.cssText='color:var(--dim);font-size:11px;white-space:nowrap';$('#pname').insertAdjacentElement('afterend',e)}e.textContent=t}
+function asInd(t){let e=$('#saveInd');if(!e){e=document.createElement('span');e.id='saveInd';e.setAttribute('role','status');e.setAttribute('aria-live','polite');e.setAttribute('aria-atomic','true');e.style.cssText='color:var(--dim);font-size:11px;white-space:nowrap';$('#pname').insertAdjacentElement('afterend',e)}e.textContent=t}
 async function autosave(){
   if(!asReady||asBusy||S.exporting)return;
   const sig=snap()+S.media.map(m=>m.id).join(',')+S.master;if(sig===asLast)return;asBusy=true;
@@ -3884,7 +3885,7 @@ async function autosave(){
     await idb.put('meta',{tracks:S.tracks,project:S.project,markers:S.markers,mediaIds:ids,master:S.master,savedAt:Date.now()},'project');
     for(const k of await idb.keys('media'))if(!ids.includes(k))await idb.del('media',k);
     asLast=sig;asInd('✓ Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
-  }catch(e){console.warn('autosave',e);asInd('Autosave unavailable')}
+  }catch(e){console.warn('autosave',e);const quota=e&&(/quota/i.test(e.name||'')||/quota|storage/i.test(e.message||''));asInd(quota?'Storage full · download a project backup':'Autosave failed · check browser storage')}
   asBusy=false}
 async function restoreProject(meta,rowsIn,fromFile){
   if(fromFile){S.media.forEach(m=>{try{URL.revokeObjectURL(m.url)}catch(e){}});S.media=[];S.sel=null;clearMs()}
@@ -3901,7 +3902,7 @@ async function restoreProject(meta,rowsIn,fromFile){
   try{$('#pname').value=S.project.name;$('#selFps').value=S.project.fps;$('#selAspect').value=S.project.w+'x'+S.project.h;$('#master').value=S.master}catch(e){}
   syncAll();seekTime(0);toast('Project restored','ok')}
 (async()=>{
-  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+  try{if(navigator.storage&&navigator.storage.persist){const persisted=await navigator.storage.persist();if(!persisted)console.info('Browser storage is best-effort; export a project backup regularly')}}catch(e){console.info('Persistent storage request unavailable',e)}
   try{
     const meta=await idb.get('meta','project');
     if(meta&&meta.tracks&&meta.tracks.some(t=>t.clips.length)){
@@ -4312,7 +4313,7 @@ window.addEventListener('resize',()=>{fitStage();renderTimeline()});
 S.tracks=[newTrack('visual','V2'),newTrack('visual','V1'),newTrack('audio','A1')];
 sizeCanvas();renderLib();renderInspector();renderTimeline();updHist();
 requestAnimationFrame(loopFrame);
-setTimeout(()=>toast('Welcome to CutBox Studio — drop media to begin ✦','info',4200),600);
+setTimeout(()=>toast('Welcome to GOPISUNA VIDEO STUDIO — drop media to begin ✦','info',4200),600);
 </script>
 
 <script>
