@@ -4117,7 +4117,7 @@ function startExport(){
   cv.width=expCfg.w;cv.height=expCfg.h;buf.width=cv.width;buf.height=cv.height;fitStage();
   audio();
   if(fmt==='mp4'&&offMode())return startOffline(fps,q).catch(e=>{console.warn('offline render unavailable',e);if(wcMode())return startWC(fps,q);fallbackToWebM(fps,q,e)});
-  if(fmt==='mp4'&&wcMode())return startWC(fps,q);
+  if(fmt==='mp4'&&wcMode())return startWC(fps,q).catch(e=>{console.warn('WebCodecs MP4 render unavailable',e);fallbackToWebM(fps,q,e)});
   const supportedMimes=mimes();
   if(!window.MediaRecorder||!supportedMimes.length){toast('This browser does not support video recording. Try a browser with WebCodecs or MediaRecorder support.','err');return}
   const stream=cv.captureStream(fps);
