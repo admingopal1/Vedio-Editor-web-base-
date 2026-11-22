@@ -2717,6 +2717,7 @@ let AC=null,MASTER=null,SD=null,AN=null;
 const cv=$('#cv'),ctx=cv.getContext('2d',{alpha:false});
 const buf=document.createElement('canvas'),bctx=buf.getContext('2d');
 let noiseTile=null;
+let previewMax=1280;
 
 /* ---------------- Audio graph ---------------- */
 function audio(){
@@ -2897,8 +2898,8 @@ function placeMedia(id,trackId,time){
    RENDER ENGINE
    ========================================================================== */
 function sizeCanvas(preview=true){
-  const p=S.project, max=preview?1280:Math.max(p.w,p.h);
-  const k=preview?Math.min(1,1280/Math.max(p.w,p.h)):1;
+  const p=S.project, max=preview?previewMax:Math.max(p.w,p.h);
+  const k=preview?Math.min(1,previewMax/Math.max(p.w,p.h)):1;
   cv.width=Math.round(p.w*k); cv.height=Math.round(p.h*k);
   buf.width=cv.width;buf.height=cv.height;
   {const vt=$('#vtagTxt');if(vt)vt.textContent=`${p.w} × ${p.h} · ${p.fps}fps`;}
@@ -4623,6 +4624,16 @@ window.addEventListener('resize',()=>{fitStage();renderTimeline()});
 
 /* ---------------- Boot ---------------- */
 S.tracks=[newTrack('visual','V2'),newTrack('visual','V1'),newTrack('audio','A1')];
+const previewBtn=document.createElement('button');
+previewBtn.type='button';previewBtn.id='previewQuality';previewBtn.textContent='Preview: 1280p';
+previewBtn.title='Lower preview canvas resolution for smoother editing; export quality is unchanged';
+previewBtn.style.cssText='position:absolute;right:10px;bottom:42px;z-index:20;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:600 11px inherit;cursor:pointer';
+$('#viewer').appendChild(previewBtn);
+previewBtn.addEventListener('click',()=>{
+  previewMax=previewMax===1280?720:1280;
+  previewBtn.textContent='Preview: '+previewMax+'p';
+  sizeCanvas();render();toast(previewMax===720?'Performance preview enabled · export unchanged':'High preview enabled · export unchanged','info');
+});
 sizeCanvas();renderLib();renderInspector();renderTimeline();updHist();
 requestAnimationFrame(loopFrame);
 setTimeout(()=>toast('Welcome to GOPISUNA VIDEO STUDIO — drop media to begin ✦','info',4200),600);
