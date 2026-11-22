@@ -431,9 +431,14 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   .tlbar { min-height:48px; padding:4px 6px; gap:3px; }
   .tb { min-height:38px; padding:6px 9px; font-size:11px; }
   .tlbody { min-height:0; }
-  .heads { width:88px; }
-  .thead { padding:6px 5px; }
-  .thead .tn { font-size:10px; }
+  /* Keep track controls comfortably tappable without squeezing four actions together. */
+  .heads { width:120px; }
+  .thead { padding:6px 6px; }
+  .thead .tn { font-size:10px; min-width:0; }
+  .thead .tn span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .thead .ta { gap:3px; }
+  .thead .mini { width:26px; min-width:26px; height:30px; min-height:30px; flex:0 0 26px; touch-action:manipulation; }
+  .thead .mini .i { width:14px; height:14px; }
   .tscroll { min-width:0; overflow-x:auto; overscroll-behavior-x:contain; }
   .grip { height:9px; min-height:9px; touch-action:pan-y; }
   /* Keep custom timeline clip/trim and height-resize gestures from being hijacked by browser panning. */
