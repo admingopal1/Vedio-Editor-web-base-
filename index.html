@@ -3308,6 +3308,7 @@ function loopFrame(now){
   if(active){
     if(!S.offline){syncMedia();prewarmAhead();render();}
     if(WC)wcFrame();
+    if(WC&&WC.getError&&WC.getError()){S.playing=false;finishExport();}
     updPlayhead();
     vu();
   }
@@ -4182,7 +4183,9 @@ async function startWC(fps,q){
   WC={mux,venc,aenc,sp,fps,t0:performance.now(),last:-1e9,n:0,an:0,a0:null,getError:()=>wcErr};
   sp.onaudioprocess=e=>{const w=WC;if(!w||!w.aenc)return;const L=e.inputBuffer.getChannelData(0),R=e.inputBuffer.numberOfChannels>1?e.inputBuffer.getChannelData(1):L,n=L.length,d=new Float32Array(n*2);
     d.set(L,0);d.set(R,n);if(w.a0===null)w.a0=Math.round((performance.now()-w.t0)*1000-n*1e6/sr);
-    w.aenc.encode(new AudioData({format:'f32-planar',sampleRate:sr,numberOfFrames:n,numberOfChannels:2,timestamp:Math.max(0,w.a0)+Math.round(w.an*1e6/sr),data:d}));w.an+=n};
+    if(w.aenc.encodeQueueSize>16){w.wcErr=new Error('Audio encoder queue exceeded safe limit');console.error(w.wcErr);return}
+    const ad=new AudioData({format:'f32-planar',sampleRate:sr,numberOfFrames:n,numberOfChannels:2,timestamp:Math.max(0,w.a0)+Math.round(w.an*1e6/sr),data:d});
+    try{w.aenc.encode(ad)}catch(err){w.wcErr=err;console.error('MP4 audio frame encode failed',err)}finally{ad.close()}w.an+=n};
   expCancel=false;S.exporting=true;S.rate=1;S.loop=false;S.time=0;
   $('#eProg').style.display='block';$('#eGo').disabled=true;$('#eGo').style.opacity=.5;
   $('#expFoot').innerHTML=`<button class="btn dgr" style="width:auto;padding:9px 18px" id="eStop">Cancel render</button>`;
@@ -4259,7 +4262,11 @@ async function mixAudio(sr){
     node.connect(g);node=g;
     if(c.duck){const dk=oac.createGain(),n=Math.max(2,Math.ceil(d*20)+1),arr=new Float32Array(n);for(let i=0;i<n;i++)arr[i]=duckG(c,t0+Math.min(d,i/20));dk.gain.setValueCurveAtTime(arr,t0,d);node.connect(dk);node=dk}
     node.connect(mg);src.start(t0,off,Math.max(.01,c.out-c.in))}
-  return oac.startRendering()}
+  const rendered=await oac.startRendering();
+  /* Decoded source buffers are only an export cache; release them after the mixed
+     PCM is ready so long projects do not retain both source and mixed audio. */
+  for(const [c,b] of items){const m=media(c.mediaId);if(m&&m._ab===b){m._ab=null;m._abSr=null}}
+  return rendered}
 async function exportWav(){
   const go=$('#eGo');go.disabled=true;toast('Mixing audio…','info');
   try{const b=await mixAudio(48000);
@@ -4272,7 +4279,7 @@ async function startOffline(fps,q){
   const W=expCfg.w,Hh=expCfg.h,sr=48000;let vc=WCAVC;if(vc.startsWith('avc')&&Math.max(W,Hh)>2560)vc='avc1.640033';
   /* Avoid allocating a full-project PCM mix for very long timelines. The live
      WebCodecs path keeps audio streaming and avoids the extra decoded mix buffer. */
-  if(S.duration>180&&typeof VideoEncoder!=='undefined'&&typeof AudioEncoder!=='undefined'){
+  if((S.duration>180||(W*Hh>=8294400&&S.duration>60))&&typeof VideoEncoder!=='undefined'&&typeof AudioEncoder!=='undefined'){
     toast('Long project detected – using streaming export to reduce audio memory','info');
     return startWC(fps,q);
   }
