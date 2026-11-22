@@ -4672,7 +4672,29 @@ $('#tPrev').onclick=()=>seekTime(S.time-1/S.project.fps); $('#tNext').onclick=()
 $('#tLoop').onclick=e=>{S.loop=!S.loop;e.currentTarget.classList.toggle('on',S.loop)};
 $('#tGuides').onclick=e=>{S.guides=!S.guides;$('#guides').classList.toggle('on',S.guides);e.currentTarget.classList.toggle('on',S.guides)};
 $('#tSnap').onclick=()=>{const a=document.createElement('a');a.href=cv.toDataURL('image/png');a.download='frame-'+tc(S.time).replace(/[:.]/g,'-')+'.png';a.click();toast('Snapshot saved','ok')};
-$('#tFull').onclick=()=>{const v=$('#viewer');document.fullscreenElement?document.exitFullscreen():v.requestFullscreen?.()};
+function syncFullscreenControl(){
+  const active=document.fullscreenElement===$('#viewer'),btn=$('#tFull');
+  btn.classList.toggle('on',active);
+  btn.setAttribute('aria-pressed',String(active));
+  btn.setAttribute('aria-label',active?'Exit fullscreen preview':'Enter fullscreen preview');
+  btn.dataset.tip=active?'Exit fullscreen (Esc)':'Fullscreen (F)';
+  btn.title=active?'Exit fullscreen (Esc)':'Fullscreen (F)';
+}
+$('#tFull').onclick=async()=>{
+  const v=$('#viewer');
+  try{
+    if(document.fullscreenElement){
+      if(document.exitFullscreen)await document.exitFullscreen();
+    }else if(v.requestFullscreen){
+      await v.requestFullscreen();
+    }else{
+      toast('Fullscreen is not supported in this browser','info');
+    }
+  }catch(err){
+    console.warn('Fullscreen request failed',err);
+    toast('Could not open fullscreen preview','error');
+  }
+};
 $('#master').oninput=e=>{S.master=+e.target.value;if(MASTER)MASTER.gain.value=S.master};
 $('#scrub').addEventListener('pointerdown',e=>{
   const r=e.currentTarget.getBoundingClientRect();
@@ -4777,7 +4799,8 @@ document.addEventListener('keydown',e=>{
   }
 });
 window.addEventListener('resize',()=>{fitStage();renderTimeline()});
-document.addEventListener('fullscreenchange',()=>requestAnimationFrame(()=>{fitStage();render()}));
+document.addEventListener('fullscreenchange',()=>{syncFullscreenControl();requestAnimationFrame(()=>{fitStage();render()})});
+syncFullscreenControl();
 if('ResizeObserver' in window){
   const viewerObserver=new ResizeObserver(()=>fitStage());
   viewerObserver.observe($('#viewer'));
