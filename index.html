@@ -62,6 +62,9 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;outline:none}
 button{background:none;border:none;cursor:pointer}
 
+/* Accessible keyboard skip link */
+.skip-link{position:fixed;top:8px;left:8px;z-index:99999;padding:10px 14px;border-radius:8px;background:#fff;color:#111;font-weight:700;transform:translateY(-160%);transition:transform .15s}
+.skip-link:focus{transform:translateY(0);outline:3px solid #22d3ee;outline-offset:3px}
 /* ---------- App shell ---------- */
 #app{position:relative;z-index:1;display:grid;grid-template-rows:54px 1fr auto;height:100vh}
 .workspace{display:grid;grid-template-columns:var(--lw) minmax(0,1fr) var(--rw);min-height:0;gap:8px;padding:8px}
@@ -414,7 +417,8 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
 <symbol id="i-key" viewBox="0 0 24 24"><path d="M12 3l7 9-7 9-7-9z"/></symbol>
 </svg>
 
-<div id="app" role="main" aria-label="GOPISUNA Video Studio editor">
+<a class="skip-link" href="#app">Skip to video editor</a>
+<div id="app" role="main" aria-label="GOPISUNA Video Studio editor" tabindex="-1">
   <!-- ================= TOP BAR ================= -->
   <header class="topbar">
     <div class="logo"><div class="mark"><svg class="i"><use href="#i-cut"/></svg></div>CutBox<span class="badge">STUDIO</span></div>
