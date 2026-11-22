@@ -4239,7 +4239,7 @@ function subsPanel(){let p=$('#subsPanel');if(p){p.remove();return}
   p=document.createElement('div');p.id='subsPanel';p.style.cssText='position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,.6);display:grid;place-items:center';
   p.innerHTML=`<div style="width:min(620px,94vw);background:var(--panel2);border:1px solid var(--line2);border-radius:16px;padding:16px;color:var(--txt)">
     <b style="font-size:15px">Subtitles</b>
-    <p style="color:var(--dim);font-size:12px;margin:6px 0 10px">Import an .srt / .vtt file or paste subtitles. Each line becomes an editable text clip on its own track. Automatic speech-to-text needs an online AI model and is not included.</p>
+    <p style="color:var(--dim);font-size:12px;margin:6px 0 10px">Import an .srt / .vtt file or paste subtitles. Each line becomes an editable text clip on its own track. AI Auto Captions uses multilingual Whisper in your browser; an internet connection is needed for the first model download.</p>
     <input type="file" id="subFile" accept=".srt,.vtt,text/plain" style="margin-bottom:8px;color:var(--dim)">
     <textarea id="subTxt" rows="9" placeholder="1&#10;00:00:01,000 --> 00:00:03,500&#10;Hello world" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px;font:12px monospace"></textarea>
     <label style="display:flex;gap:8px;margin:10px 0;font-size:12px;color:var(--dim)"><input type="checkbox" id="subHead"> Start the first subtitle at the playhead</label>
