@@ -48,7 +48,7 @@
 html,body{height:100%}
 body{
   background:var(--bg);color:var(--txt);font-family:var(--ff);font-size:13px;
-  overflow:hidden;-webkit-font-smoothing:antialiased;user-select:none;
+  overflow-x:hidden;overflow-y:auto;-webkit-font-smoothing:antialiased;user-select:none;
 }
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:radial-gradient(900px 500px at 12% -10%,rgba(124,92,255,.16),transparent 60%),
@@ -567,6 +567,84 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
 <div class="tip" id="tip"></div>
 <input type="file" id="fileIn" multiple accept="video/*,image/*,audio/*" hidden>
 <input type="file" id="projIn" accept=".json,.cutbox" hidden>
+
+
+<!-- Search-friendly product information; kept below the full-screen editor workspace. -->
+<section id="seo-content" aria-labelledby="seo-title">
+  <div class="seo-wrap">
+    <p class="seo-eyebrow">GOPISUNA VIDEO STUDIO</p>
+    <h1 id="seo-title">Free Online Video Editor</h1>
+    <p class="seo-lead">Create and edit video projects directly in your browser. GOPISUNA VIDEO STUDIO brings your media, timeline and editing controls together in one workspace, so you can start a project without installing a desktop editing application.</p>
+    <div class="seo-grid">
+      <article class="seo-card">
+        <h2>Edit on a multi-track timeline</h2>
+        <p>Arrange video, images and audio on timeline tracks. Build your sequence by placing media, moving clips and refining the order of your project.</p>
+      </article>
+      <article class="seo-card">
+        <h2>Trim, split and organize clips</h2>
+        <p>Shape your edit with clip-level actions such as trimming, splitting, duplicating and deleting. Use the preview and timeline together while you work.</p>
+      </article>
+      <article class="seo-card">
+        <h2>Work with different formats</h2>
+        <p>Bring supported video, image and audio files into your project. Available import and export options are shown inside the editor.</p>
+      </article>
+      <article class="seo-card">
+        <h2>Prepare videos for different screens</h2>
+        <p>Choose a project aspect ratio for common formats such as landscape, vertical, square and classic video layouts.</p>
+      </article>
+    </div>
+    <div class="seo-how">
+      <h2>How to edit a video online</h2>
+      <ol>
+        <li>Open the editor at the top of this page.</li>
+        <li>Import a video, image or audio file from your device.</li>
+        <li>Arrange your clips on the timeline and make your edits.</li>
+        <li>Preview your project, then use the Export controls to render your video.</li>
+      </ol>
+    </div>
+    <div class="seo-faq">
+      <h2>Frequently asked questions</h2>
+      <details><summary>Do I need to install video editing software?</summary><p>The editor runs in a modern web browser. Open this page to access the editing workspace; your browser and device must support the media features used by the editor.</p></details>
+      <details><summary>Can I edit video and audio in one project?</summary><p>The workspace provides separate visual and audio timeline tracks. Import supported media and arrange the clips in your project.</p></details>
+      <details><summary>Can I create vertical videos?</summary><p>The project format controls include a vertical 9:16 option, alongside landscape, square and other aspect ratios.</p></details>
+      <details><summary>How do I export my finished video?</summary><p>Use the Export controls in the editor. Available rendering options depend on your browser and device capabilities.</p></details>
+    </div>
+    <p class="seo-note">Tip: For the best editing experience, use an up-to-date desktop browser and keep this tab open while exporting.</p>
+  </div>
+</section>
+<style>
+#seo-content{position:relative;z-index:1;background:#090b12;color:#e9edf7;border-top:1px solid #232a3a;padding:58px 22px 64px;font:15px/1.7 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;user-select:text}
+#seo-content *{box-sizing:border-box}
+#seo-content .seo-wrap{max-width:1080px;margin:0 auto}
+#seo-content .seo-eyebrow{color:#22d3ee;font-size:12px;font-weight:800;letter-spacing:.16em;margin:0 0 10px}
+#seo-content h1{font-size:clamp(30px,5vw,48px);line-height:1.12;letter-spacing:-.035em;margin:0 0 16px;color:#fff}
+#seo-content h2{font-size:19px;line-height:1.3;margin:0 0 10px;color:#fff}
+#seo-content p{color:#aeb8cc;margin:0}
+#seo-content .seo-lead{font-size:17px;max-width:850px;margin-bottom:30px}
+#seo-content .seo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+#seo-content .seo-card,#seo-content .seo-how,#seo-content .seo-faq{background:#101522;border:1px solid #283247;border-radius:14px;padding:22px}
+#seo-content .seo-how,#seo-content .seo-faq{margin-top:16px}
+#seo-content ol{margin:8px 0 0;padding-left:22px;color:#c4ccda}
+#seo-content li{padding:3px 0}
+#seo-content details{border-top:1px solid #283247;padding:14px 0}
+#seo-content details:first-of-type{margin-top:6px}
+#seo-content summary{cursor:pointer;color:#e9edf7;font-weight:650}
+#seo-content details p{padding-top:8px}
+#seo-content .seo-note{font-size:13px;margin-top:22px}
+@media(max-width:640px){#seo-content{padding:38px 16px 46px}#seo-content .seo-grid{grid-template-columns:1fr}#seo-content .seo-card,#seo-content .seo-how,#seo-content .seo-faq{padding:18px}}
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type":"Question","name":"Do I need to install video editing software?","acceptedAnswer":{"@type":"Answer","text":"The editor runs in a modern web browser. Open this page to access the editing workspace; your browser and device must support the media features used by the editor."}},
+    {"@type":"Question","name":"Can I edit video and audio in one project?","acceptedAnswer":{"@type":"Answer","text":"The workspace provides separate visual and audio timeline tracks. Import supported media and arrange the clips in your project."}},
+    {"@type":"Question","name":"Can I create vertical videos?","acceptedAnswer":{"@type":"Answer","text":"The project format controls include a vertical 9:16 option, alongside landscape, square and other aspect ratios."}},
+    {"@type":"Question","name":"How do I export my finished video?","acceptedAnswer":{"@type":"Answer","text":"Use the Export controls in the editor. Available rendering options depend on your browser and device capabilities."}}
+  ]
+}
+</script>
 
 <script>/* mp4-muxer 5.1.3 (MIT) – Vanilla JS MP4 muxer, inlined */
 "use strict";
