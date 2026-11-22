@@ -3301,7 +3301,7 @@ $('#tscroll').addEventListener('pointerdown',e=>{
   const ce=$(`[data-c="${c.id}"]`)||cel; drag.el=ce; try{ce.setPointerCapture(e.pointerId)}catch(_){} ce.classList.add('drag');
 });
 $('#tscroll').addEventListener('pointermove',e=>{
-  if(!drag)return;
+  if(!drag||e.pointerId!==drag.pointerId)return;
   const dx=(e.clientX-drag.x)/drag.z, c=drag.c;
   if(Math.abs(e.clientX-drag.x)>2||Math.abs(e.clientY-drag.y)>2)drag.moved=true;
   const m=media(c.mediaId), isSrc=c.type==='video'||c.type==='audio';
