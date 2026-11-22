@@ -4113,20 +4113,26 @@ const idb=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=index
   const tx=async(st,mode,fn)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction(st,mode),r=fn(t.objectStore(st));t.oncomplete=()=>res(r&&r.result);t.onerror=t.onabort=()=>rej(t.error)})};
   return{put:(st,v,k)=>tx(st,'readwrite',s=>k===undefined?s.put(v):s.put(v,k)),get:(st,k)=>tx(st,'readonly',s=>s.get(k)),all:st=>tx(st,'readonly',s=>s.getAll()),
     keys:st=>tx(st,'readonly',s=>s.getAllKeys()),del:(st,k)=>tx(st,'readwrite',s=>s.delete(k)),clear:st=>tx(st,'readwrite',s=>s.clear())}})();
-let asReady=false,asLast='',asBusy=false;
+let asReady=false,asLast='',asBusy=false,asQueued=false;
 function asInd(t){let e=$('#saveInd');if(!e){e=document.createElement('span');e.id='saveInd';e.setAttribute('role','status');e.setAttribute('aria-live','polite');e.setAttribute('aria-atomic','true');e.style.cssText='color:var(--dim);font-size:11px;white-space:nowrap';$('#pname').insertAdjacentElement('afterend',e)}e.textContent=t}
 async function autosave(){
-  if(!asReady||asBusy||S.exporting)return;
-  const sig=snap()+S.media.map(m=>m.id).join(',')+S.master;if(sig===asLast)return;asBusy=true;
+  if(!asReady||S.exporting)return;
+  if(asBusy){asQueued=true;return}
+  const sig=snap()+JSON.stringify(S.media.map(m=>[m.id,m.name,m.type,m.dur,m.w,m.h,m.size]))+S.master;
+  if(sig===asLast)return;
+  asBusy=true;asInd('Saving…');
   try{
-    for(const m of S.media){if(m._saved||!m.file)continue;
-      await idb.put('media',{id:m.id,name:m.name,type:m.type,dur:m.dur,w:m.w,h:m.h,size:m.size,thumb:typeof m.thumb==='string'?m.thumb:null,strip:typeof m.strip==='string'?m.strip:null,peaks:m.peaks||null,blob:m.file});m._saved=true}
+    for(const m of S.media){if(!m._saved&&m.file){
+      await idb.put('media',{id:m.id,name:m.name,type:m.type,dur:m.dur,w:m.w,h:m.h,size:m.size,thumb:typeof m.thumb==='string'?m.thumb:null,strip:typeof m.strip==='string'?m.strip:null,peaks:m.peaks||null,blob:m.file});m._saved=true
+    }}
     const ids=S.media.map(m=>m.id);
     await idb.put('meta',{tracks:S.tracks,project:S.project,markers:S.markers,mediaIds:ids,master:S.master,savedAt:Date.now()},'project');
     for(const k of await idb.keys('media'))if(!ids.includes(k))await idb.del('media',k);
     asLast=sig;asInd('✓ Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
-  }catch(e){console.warn('autosave',e);const quota=e&&(/quota/i.test(e.name||'')||/quota|storage/i.test(e.message||''));asInd(quota?'Storage full · download a project backup':'Autosave failed · check browser storage')}
-  asBusy=false}
+  }catch(e){console.warn('autosave',e);const quota=e&&(/quota/i.test(e.name||'')||/quota|storage/i.test(e.message||''));asInd(quota?'Storage full · export a .cutbox backup':'Autosave failed · check browser storage')}
+  asBusy=false;
+  if(asQueued){asQueued=false;autosave()}
+}
 async function restoreProject(meta,rowsIn,fromFile){
   if(fromFile){S.media.forEach(m=>{try{URL.revokeObjectURL(m.url)}catch(e){}});S.media=[];S.sel=null;clearMs()}
   const rows=rowsIn||await idb.all('media'),by=new Map(rows.map(r=>[r.id,r]));
@@ -4145,16 +4151,18 @@ async function restoreProject(meta,rowsIn,fromFile){
   try{if(navigator.storage&&navigator.storage.persist){const persisted=await navigator.storage.persist();if(!persisted)console.info('Browser storage is best-effort; export a project backup regularly')}}catch(e){console.info('Persistent storage request unavailable',e)}
   try{
     const meta=await idb.get('meta','project');
-    if(meta&&meta.tracks&&meta.tracks.some(t=>t.clips.length)){
-      const n=meta.tracks.reduce((a,t)=>a+t.clips.length,0),b=document.createElement('div');
+    if(meta&&meta.tracks&&(meta.mediaIds?.length||meta.tracks.some(t=>t.clips.length))){
+      const n=meta.tracks.reduce((a,t)=>a+t.clips.length,0),mediaN=(meta.mediaIds||[]).length,b=document.createElement('div');
       b.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:99999;background:var(--panel2);border:1px solid var(--acc);border-radius:14px;padding:12px 16px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.55);color:var(--txt);font-size:13px;max-width:92vw;flex-wrap:wrap';
-      b.innerHTML=`<span>Previous project found · <b>${n} clips</b> · saved ${new Date(meta.savedAt).toLocaleString([],{dateStyle:'medium',timeStyle:'short'})}</span><button class="btn acc" id="rsYes" style="width:auto;padding:7px 14px">Restore</button><button class="btn" id="rsNo" style="width:auto;padding:7px 14px">Start fresh</button>`;
+      b.innerHTML=`<span>Previous project found · <b>${n} clips · ${mediaN} media</b> · saved ${new Date(meta.savedAt).toLocaleString([],{dateStyle:'medium',timeStyle:'short'})}</span><button class="btn acc" id="rsYes" style="width:auto;padding:7px 14px">Restore</button><button class="btn" id="rsNo" style="width:auto;padding:7px 14px">Start fresh</button>`;
       document.body.appendChild(b);
       $('#rsYes').onclick=async()=>{b.remove();try{await restoreProject(meta)}catch(e){console.error(e);toast('Could not restore project','err')}asReady=true};
       $('#rsNo').onclick=async()=>{b.remove();try{await idb.clear('media');await idb.clear('meta')}catch(e){}asReady=true};
     }else asReady=true;
   }catch(e){asReady=true}
-  setInterval(autosave,2500);
+  setInterval(autosave,1800);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')autosave()});
+  addEventListener('pagehide',()=>{autosave()});
 })();
 addEventListener('beforeunload',e=>{if(S.exporting){e.preventDefault();e.returnValue=''}});
 
