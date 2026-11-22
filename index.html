@@ -432,12 +432,12 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   .tb { min-height:38px; padding:6px 9px; font-size:11px; }
   .tlbody { min-height:0; }
   /* Keep track controls comfortably tappable without squeezing four actions together. */
-  .heads { width:120px; }
+  .heads { width:148px; }
   .thead { padding:6px 6px; }
   .thead .tn { font-size:10px; min-width:0; }
   .thead .tn span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .thead .ta { gap:3px; }
-  .thead .mini { width:26px; min-width:26px; height:30px; min-height:30px; flex:0 0 26px; touch-action:manipulation; }
+  .thead .ta { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:2px; }
+  .thead .mini { width:100%; min-width:0; height:38px; min-height:38px; padding:0; touch-action:manipulation; }
   .thead .mini .i { width:14px; height:14px; }
   .tscroll { min-width:0; overflow-x:auto; overscroll-behavior-x:contain; }
   .grip { height:9px; min-height:9px; touch-action:pan-y; }
@@ -3205,11 +3205,11 @@ function renderTimeline(){
     <div class="thead ${t.type==='audio'?'a':''}" data-t="${t.id}">
       <div class="tn">${icon(t.type==='audio'?'music':'layers')}<span contenteditable="true" data-ren="${t.id}" style="outline:none">${t.name}</span></div>
       <div class="ta">
-        ${t.type==='visual'?`<button class="mini ${t.hidden?'off':''}" data-act="hide" data-t="${t.id}" data-tip="Show / hide">${icon(t.hidden?'eyeoff':'eye')}</button>`:''}
-        <button class="mini ${t.muted?'off':''}" data-act="mute" data-t="${t.id}" data-tip="Mute">${icon(t.muted?'mute':'vol')}</button>
-        <button class="mini ${t.solo?'on':''}" data-act="solo" data-t="${t.id}" data-tip="Solo"><b style="font-size:10px">S</b></button>
-        <button class="mini ${t.locked?'on':''}" data-act="lock" data-t="${t.id}" data-tip="Lock">${icon('lock')}</button>
-        <button class="mini" data-act="deltrack" data-t="${t.id}" data-tip="Remove track">${icon('trash')}</button>
+        ${t.type==='visual'?`<button class="mini ${t.hidden?'off':''}" data-act="hide" data-t="${t.id}" data-tip="Show / hide" title="Show or hide track" aria-label="Show or hide track">${icon(t.hidden?'eyeoff':'eye')}</button>`:''}
+        <button class="mini ${t.muted?'off':''}" data-act="mute" data-t="${t.id}" data-tip="Mute" title="Mute or unmute track" aria-label="Mute or unmute track">${icon(t.muted?'mute':'vol')}</button>
+        <button class="mini ${t.solo?'on':''}" data-act="solo" data-t="${t.id}" data-tip="Solo" title="Solo track" aria-label="Solo track"><b style="font-size:10px">S</b></button>
+        <button class="mini ${t.locked?'on':''}" data-act="lock" data-t="${t.id}" data-tip="Lock" title="Lock or unlock track" aria-label="Lock or unlock track">${icon('lock')}</button>
+        <button class="mini" data-act="deltrack" data-t="${t.id}" data-tip="Remove track" title="Remove track" aria-label="Remove track">${icon('trash')}</button>
       </div>
     </div>`).join('');
   /* tracks */
