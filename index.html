@@ -3295,7 +3295,8 @@ function loopFrame(now){
   const active=S.playing||S.exporting;
   const dt=Math.min(.25,(now-last)/1000); last=now;
   if(S.playing){
-    S.time+=dt*S.rate;
+    if(S.exporting&&WC&&AC&&Number.isFinite(WC.acStart))S.time=Math.max(0,AC.currentTime-WC.acStart);
+    else S.time+=dt*S.rate;
     if(S.time>=S.duration){
       if(S.exporting){ S.time=S.duration; S.playing=false; finishExport(); }
       else if(S.loop&&S.duration>0){ S.time=0; }
@@ -4182,9 +4183,9 @@ async function startWC(fps,q){
   const venc=new VideoEncoder({output:(c,m)=>mux.addVideoChunk(c,m),error:e=>{wcErr=e;console.error('MP4 video encoder error',e)}});venc.configure({codec:vc,width:W,height:Hh,bitrate:q,framerate:fps});
   let aenc=null;if(ac){aenc=new AudioEncoder({output:(c,m)=>mux.addAudioChunk(c,m),error:e=>{wcErr=e;console.error('MP4 audio encoder error',e)}});aenc.configure({codec:ac,sampleRate:sr,numberOfChannels:2,bitrate:192000})}
   const sp=AC.createScriptProcessor(4096,2,2);MASTER.connect(sp);sp.connect(AC.destination);
-  WC={mux,venc,aenc,sp,fps,t0:performance.now(),last:-1e9,n:0,an:0,a0:null,wcErr:null,getError:()=>wcErr||WC?.wcErr||null};
+  WC={mux,venc,aenc,sp,fps,acStart:AC.currentTime,lastTime:-1e9,n:0,an:0,a0:null,wcErr:null,getError:()=>wcErr||WC?.wcErr||null};
   sp.onaudioprocess=e=>{const w=WC;if(!w||!w.aenc)return;const L=e.inputBuffer.getChannelData(0),R=e.inputBuffer.numberOfChannels>1?e.inputBuffer.getChannelData(1):L,n=L.length,d=new Float32Array(n*2);
-    d.set(L,0);d.set(R,n);if(w.a0===null)w.a0=Math.round((performance.now()-w.t0)*1000-n*1e6/sr);
+    d.set(L,0);d.set(R,n);if(w.a0===null)w.a0=Math.max(0,Math.round((AC.currentTime-w.acStart)*1e6-n*1e6/sr));
     if(w.aenc.encodeQueueSize>16){w.wcErr=new Error('Audio encoder queue exceeded safe limit');console.error(w.wcErr);return}
     const ad=new AudioData({format:'f32-planar',sampleRate:sr,numberOfFrames:n,numberOfChannels:2,timestamp:Math.max(0,w.a0)+Math.round(w.an*1e6/sr),data:d});
     try{w.aenc.encode(ad)}catch(err){w.wcErr=err;console.error('MP4 audio frame encode failed',err)}finally{ad.close()}w.an+=n};
@@ -4195,8 +4196,8 @@ async function startWC(fps,q){
   $('#vtag').innerHTML=`<span class="rec-dot"></span><span>RENDERING ${W}×${Hh}</span>`;
   play();
 }
-function wcFrame(){const w=WC;if(!w||w.getError&&w.getError())return;const now=performance.now();if(now-w.last<1000/w.fps-3||w.venc.encodeQueueSize>10)return;w.last=now;
-  let vf;try{vf=new VideoFrame(cv,{timestamp:Math.round((now-w.t0)*1000),duration:Math.round(1e6/w.fps)});w.venc.encode(vf,{keyFrame:w.n++%(w.fps*2)===0});}
+function wcFrame(){const w=WC;if(!w||w.getError&&w.getError())return;const ts=Math.max(0,Math.round((S.time||0)*1e6));if(ts-w.lastTime<1e6/w.fps-3000||w.venc.encodeQueueSize>10)return;w.lastTime=ts;
+  let vf;try{vf=new VideoFrame(cv,{timestamp:ts,duration:Math.round(1e6/w.fps)});w.venc.encode(vf,{keyFrame:w.n++%(w.fps*2)===0});}
   catch(e){w.frameErr=e;console.error('MP4 frame encode failed',e)}finally{try{vf&&vf.close()}catch(e){}}}
 async function wcEnd(){const w=WC;if(!w)return;WC=null;
   try{w.sp.onaudioprocess=null;w.sp.disconnect();MASTER.disconnect(w.sp)}catch(e){}
