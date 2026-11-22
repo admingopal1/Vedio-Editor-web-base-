@@ -2834,7 +2834,7 @@ async function addFiles(files){
     S.media.push(m); renderLib();
     try{
       if(type==='video'){
-        const v=document.createElement('video');v.src=url;v.preload='auto';v.muted=true;v.playsInline=true;m.el=v;
+        const v=document.createElement('video');v.src=url;v.preload='metadata';v.muted=true;v.playsInline=true;m.el=v;
         await new Promise(r=>{v.onloadedmetadata=r;v.onerror=r;setTimeout(r,9000)});
         m.dur=isFinite(v.duration)?v.duration:5;m.w=v.videoWidth||1920;m.h=v.videoHeight||1080;
         await seek(v,Math.min(.15,m.dur/3)); m.thumb=grab(v,m.w,m.h);
@@ -2859,12 +2859,18 @@ function grab(v,w,h){ const c=document.createElement('canvas');const k=Math.min(
   c.width=Math.max(2,Math.round(w*k));c.height=Math.max(2,Math.round(h*k));
   try{c.getContext('2d').drawImage(v,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.72)}catch(e){return null} }
 async function filmstrip(m){
-  const v=document.createElement('video');v.src=m.url;v.muted=true;v.preload='auto';
-  await new Promise(r=>{v.onloadedmetadata=r;v.onerror=r;setTimeout(r,6000)});
-  const N=10,H=54,W=Math.max(24,Math.round(H*(m.w/m.h)));
-  const out=document.createElement('canvas');out.width=W*N;out.height=H;const o=out.getContext('2d');
-  for(let i=0;i<N;i++){ await seek(v,m.dur*(i+.5)/N); try{o.drawImage(v,i*W,0,W,H)}catch(e){} }
-  try{m.strip=out.toDataURL('image/jpeg',.6);m.stripW=W*N;}catch(e){}
+  const v=document.createElement('video');v.src=m.url;v.muted=true;v.preload='metadata';v.playsInline=true;
+  try{
+    await new Promise(r=>{let done=false;const fin=()=>{if(done)return;done=true;v.removeEventListener('loadedmetadata',fin);v.removeEventListener('error',fin);r()};
+      v.addEventListener('loadedmetadata',fin,{once:true});v.addEventListener('error',fin,{once:true});setTimeout(fin,6000)});
+    if(!v.videoWidth||!v.videoHeight)return;
+    const N=10,H=54,W=Math.max(24,Math.round(H*(m.w/m.h)));
+    const out=document.createElement('canvas');out.width=W*N;out.height=H;const o=out.getContext('2d');
+    for(let i=0;i<N;i++){await seek(v,m.dur*(i+.5)/N);try{o.drawImage(v,i*W,0,W,H)}catch(e){}}
+    try{m.strip=out.toDataURL('image/jpeg',.6);m.stripW=W*N}catch(e){}
+  }finally{
+    try{v.pause();v.removeAttribute('src');v.load()}catch(e){}
+  }
   renderTimeline();
 }
 async function peaks(m,f){
@@ -4156,7 +4162,7 @@ async function restoreProject(meta,rowsIn,fromFile){
   const rows=rowsIn||await idb.all('media'),by=new Map(rows.map(r=>[r.id,r]));
   for(const id of meta.mediaIds){const r=by.get(id);if(!r)continue;const url=URL.createObjectURL(r.blob);
     const m={id:r.id,name:r.name,type:r.type,url,dur:r.dur,w:r.w,h:r.h,thumb:r.thumb,strip:r.strip,peaks:r.peaks,size:r.size,file:r.blob,_saved:!fromFile};
-    if(r.type==='video'){const v=document.createElement('video');v.src=url;v.preload='auto';v.muted=true;v.playsInline=true;m.el=v}
+    if(r.type==='video'){const v=document.createElement('video');v.src=url;v.preload='metadata';v.muted=true;v.playsInline=true;m.el=v}
     else if(r.type==='image'){const im=new Image();im.src=url;m.el=im}
     else{const a=document.createElement('audio');a.src=url;a.preload='auto';m.el=a}
     S.media.push(m)}
