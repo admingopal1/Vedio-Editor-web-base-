@@ -710,6 +710,7 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   <div class="grip" id="grip"></div>
   <div class="panel tl">
     <div class="tlbar">
+      <button class="tb" id="bMulti" type="button" aria-pressed="false" data-tip="Tap clips to add or remove them from the selection"><svg class="i"><use href="#i-check"/></svg><span>Multi-select</span></button>
       <button class="tb" id="bSplit" data-tip="Split at playhead (S)"><svg class="i"><use href="#i-cut"/></svg>Split</button>
       <button class="tb" id="bSil" data-tip="Remove silences from selected clip"><svg class="i"><use href="#i-cut"/></svg>Silences</button>
       <button class="tb" id="bDup" data-tip="Duplicate (Ctrl+D)"><svg class="i"><use href="#i-copy"/></svg>Duplicate</button>
@@ -3378,7 +3379,13 @@ $('#tscroll').addEventListener('scroll',()=>{
 },{passive:true});
 
 /* ---------------- Timeline interaction ---------------- */
-let drag=null;
+let drag=null, multiSelectMode=false;
+$('#bMulti').addEventListener('click',()=>{
+  multiSelectMode=!multiSelectMode;
+  $('#bMulti').classList.toggle('on',multiSelectMode);
+  $('#bMulti').setAttribute('aria-pressed',String(multiSelectMode));
+  toast(multiSelectMode?'Multi-select on: tap clips to add or remove':'Multi-select off','info');
+});
 $('#tracks').addEventListener('keydown',e=>{
   const el=e.target.closest('.clip[role="button"]');
   if(!el||!(e.key==='Enter'||e.key===' '))return;
@@ -3421,7 +3428,7 @@ $('#tscroll').addEventListener('pointerdown',e=>{
   if(!cel){ if(!e.target.closest('.clip')){S.sel=null;clearMs();renderTimeline();renderInspector();render()} return; }
   const c=findClip(cel.dataset.c); if(!c)return;
   const tr=trackOf(c); if(tr.locked)return;
-  if(e.shiftKey||e.ctrlKey||e.metaKey){toggleSel(c.id);renderTimeline();renderInspector();render();return}
+  if(multiSelectMode||e.shiftKey||e.ctrlKey||e.metaKey){toggleSel(c.id);renderTimeline();renderInspector();render();return}
   if(!isSel(c.id)){S.sel=c.id;clearMs();renderTimeline();renderInspector();render()}
   else if(S.sel!==c.id){const rest=selIds().filter(x=>x!==c.id);S.sel=c.id;S.ms=new Set(rest);S.msOwner=c.id;renderTimeline();renderInspector();render()}
   const h=e.target.dataset.h;
