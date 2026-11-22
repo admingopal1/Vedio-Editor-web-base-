@@ -274,6 +274,7 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   background:repeating-linear-gradient(90deg,rgba(255,255,255,.014) 0 1px,transparent 1px 60px)}
 .track.a{height:52px}
 .track.dropok{background:rgba(124,92,255,.12);box-shadow:inset 0 0 0 1px var(--acc)}
+.clip .move-grip{display:none}
 .clip{position:absolute;top:6px;bottom:6px;border-radius:7px;overflow:hidden;cursor:grab;
   border:1px solid rgba(255,255,255,.14);background:#2a3348;box-shadow:0 3px 10px rgba(0,0,0,.45);transition:box-shadow .14s,border-color .14s}
 .clip:hover{border-color:rgba(255,255,255,.4)}
@@ -445,6 +446,9 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   /* Let a one-finger horizontal swipe scroll the timeline even when it starts on a clip.
      Trim handles remain custom-drag surfaces; clip movement still works with mouse/pen. */
   .clip { touch-action:pan-x; }
+  /* Dedicated move handle: clip body remains available for horizontal timeline swipes. */
+  .clip .move-grip { display:flex; position:absolute; z-index:5; top:2px; left:50%; transform:translateX(-50%); width:30px; height:19px; align-items:center; justify-content:center; gap:3px; border-radius:6px; background:rgba(8,12,22,.72); touch-action:none; }
+  .clip .move-grip i { display:block; width:2px; height:8px; border-radius:2px; background:rgba(255,255,255,.9); }
   .clip .h, .grip { touch-action:none; }
   /* Make trim handles reliably tappable on narrow touch screens. */
   .clip .h { width:18px; }
@@ -3238,6 +3242,7 @@ function clipHTML(c,t){
   return `<div class="clip ${cls} ${isSel(c.id)?'sel':''}" data-c="${c.id}" style="left:${c.start*S.zoom}px;width:${w}px;${t.locked?'pointer-events:none;opacity:.6':''}">
     ${bg}<div class="ov"></div>${tin}${tout}${wave}${kf}
     <div class="lb">${icon(ic)}<span>${label}</span>${c.speed!==1?`<em style="font-style:normal;opacity:.85">${c.speed}×</em>`:''}${c.muted?' 🔇':''}</div>
+    <div class="move-grip" data-h="move" aria-label="Drag clip to move" title="Drag to move clip"><i></i><i></i><i></i></div>
     <div class="h hl" data-h="l"></div><div class="h hr" data-h="r"></div></div>`;
 }
 function paintWave(el,c){
