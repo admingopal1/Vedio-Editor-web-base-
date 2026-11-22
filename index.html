@@ -4184,7 +4184,7 @@ async function startWC(fps,q){
   play();
 }
 function wcFrame(){const w=WC;if(!w||w.getError&&w.getError())return;const now=performance.now();if(now-w.last<1000/w.fps-3||w.venc.encodeQueueSize>10)return;w.last=now;
-  let vf;try{vf=new VideoFrame(cv,{timestamp:Math.round((now-w.t0)*1000),duration:Math.round(1e6/w.fps)});w.venc.encode(vf,{keyFrame:w.n++%(w.fps*2)===0)}
+  let vf;try{vf=new VideoFrame(cv,{timestamp:Math.round((now-w.t0)*1000),duration:Math.round(1e6/w.fps)});w.venc.encode(vf,{keyFrame:w.n++%(w.fps*2)===0});}
   catch(e){w.frameErr=e;console.error('MP4 frame encode failed',e)}finally{try{vf&&vf.close()}catch(e){}}}
 async function wcEnd(){const w=WC;if(!w)return;WC=null;
   try{w.sp.onaudioprocess=null;w.sp.disconnect();MASTER.disconnect(w.sp)}catch(e){}
