@@ -3,4 +3,15 @@
   <url><loc>https://vedio-editor-web-base-main.vercel.app/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc>https://vedio-editor-web-base-main.vercel.app/guides/how-to-edit-videos-online.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://vedio-editor-web-base-main.vercel.app/guides/how-to-make-vertical-videos.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vedio-editor-web-base-main.vercel.app/about.html</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://vedio-editor-web-base-main.vercel.app/privacy.html</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://vedio-editor-web-base-main.vercel.app/terms.html</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://vedio-editor-web-base-main.vercel.app/contact.html</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://vedio-editor-web-base-main.vercel.app/guides/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vedio-editor-web-base-main.vercel.app/guides/how-to-add-subtitles-to-videos-free.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vedio-editor-web-base-main.vercel.app/guides/how-to-remove-silence-from-video.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vedio-editor-web-base-main.vercel.app/guides/how-to-make-slow-motion-and-speed-ramp-videos.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vedio-editor-web-base-main.vercel.app/guides/video-sizes-for-youtube-reels-and-shorts.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vedio-editor-web-base-main.vercel.app/guides/how-to-trim-split-and-merge-video-clips.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vedio-editor-web-base-main.vercel.app/guides/how-to-add-text-and-titles-to-video.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 </urlset>
