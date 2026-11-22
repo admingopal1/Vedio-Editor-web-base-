@@ -4117,7 +4117,7 @@ function startExport(){
   expCfg={w:Math.round(S.project.w*k/2)*2,h:Math.round(S.project.h*k/2)*2,fps,fmt,q};
   cv.width=expCfg.w;cv.height=expCfg.h;buf.width=cv.width;buf.height=cv.height;fitStage();
   audio();
-  if(fmt==='mp4'&&offMode())return startOffline(fps,q).catch(e=>{console.warn('offline render unavailable',e);if(wcMode())return startWC(fps,q);fallbackToWebM(fps,q,e)});
+  if(fmt==='mp4'&&offMode())return startOffline(fps,q).catch(e=>{S.exporting=false;S.offline=false;try{$('#vtag').innerHTML=`<span id="vtagTxt">${S.project.w} × ${S.project.h} · ${S.project.fps}fps</span>`}catch(_e){}console.warn('offline render unavailable',e);if(wcMode())return startWC(fps,q);fallbackToWebM(fps,q,e)});
   if(fmt==='mp4'&&wcMode())return startWC(fps,q).catch(e=>{console.warn('WebCodecs MP4 render unavailable',e);fallbackToWebM(fps,q,e)});
   const supportedMimes=mimes();
   if(!window.MediaRecorder||!supportedMimes.length){toast('This browser does not support video recording. Try a browser with WebCodecs or MediaRecorder support.','err');return}
@@ -4180,7 +4180,7 @@ async function startWC(fps,q){
   const venc=new VideoEncoder({output:(c,m)=>mux.addVideoChunk(c,m),error:e=>{wcErr=e;console.error('MP4 video encoder error',e)}});venc.configure({codec:vc,width:W,height:Hh,bitrate:q,framerate:fps});
   let aenc=null;if(ac){aenc=new AudioEncoder({output:(c,m)=>mux.addAudioChunk(c,m),error:e=>{wcErr=e;console.error('MP4 audio encoder error',e)}});aenc.configure({codec:ac,sampleRate:sr,numberOfChannels:2,bitrate:192000})}
   const sp=AC.createScriptProcessor(4096,2,2);MASTER.connect(sp);sp.connect(AC.destination);
-  WC={mux,venc,aenc,sp,fps,t0:performance.now(),last:-1e9,n:0,an:0,a0:null,getError:()=>wcErr};
+  WC={mux,venc,aenc,sp,fps,t0:performance.now(),last:-1e9,n:0,an:0,a0:null,wcErr:null,getError:()=>wcErr||WC?.wcErr||null};
   sp.onaudioprocess=e=>{const w=WC;if(!w||!w.aenc)return;const L=e.inputBuffer.getChannelData(0),R=e.inputBuffer.numberOfChannels>1?e.inputBuffer.getChannelData(1):L,n=L.length,d=new Float32Array(n*2);
     d.set(L,0);d.set(R,n);if(w.a0===null)w.a0=Math.round((performance.now()-w.t0)*1000-n*1e6/sr);
     if(w.aenc.encodeQueueSize>16){w.wcErr=new Error('Audio encoder queue exceeded safe limit');console.error(w.wcErr);return}
