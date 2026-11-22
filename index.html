@@ -3319,7 +3319,9 @@ function clipHTML(c,t){
   const kf=(c.kf||[]).map(k=>`<div class="kfd" style="left:${k.t*S.zoom}px"></div>`).join('');
   const wave=c.type==='audio'?'<canvas class="wave"></canvas>':'';
   const label=c.type==='text'?(c.text.content.slice(0,40)||'Text'):c.name;
-  return `<div class="clip ${cls} ${isSel(c.id)?'sel':''}" data-c="${c.id}" style="left:${c.start*S.zoom}px;width:${w}px;${t.locked?'pointer-events:none;opacity:.6':''}">
+  const selected=isSel(c.id);
+  const safeLabel=String(label||c.type+' clip').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  return `<div class="clip ${cls} ${selected?'sel':''}" data-c="${c.id}" role="button" tabindex="0" aria-pressed="${selected}" aria-label="${safeLabel}, ${c.type} clip${selected?', selected':''}. Press Enter or Space to select." style="left:${c.start*S.zoom}px;width:${w}px;${t.locked?'pointer-events:none;opacity:.6':''}">
     ${bg}<div class="ov"></div>${tin}${tout}${wave}${kf}
     <div class="lb">${icon(ic)}<span>${label}</span>${c.speed!==1?`<em style="font-style:normal;opacity:.85">${c.speed}×</em>`:''}${c.muted?' 🔇':''}</div>
     <div class="move-grip" data-h="move" aria-label="Drag clip to move" title="Drag to move clip"><i></i><i></i><i></i></div>
@@ -3362,6 +3364,18 @@ $('#tscroll').addEventListener('scroll',()=>{
 
 /* ---------------- Timeline interaction ---------------- */
 let drag=null;
+$('#tracks').addEventListener('keydown',e=>{
+  const el=e.target.closest('.clip[role="button"]');
+  if(!el||!(e.key==='Enter'||e.key===' '))return;
+  e.preventDefault();e.stopPropagation();
+  const id=el.dataset.c,clip=findClip(id);
+  if(!clip||trackOf(clip)?.locked)return;
+  if(e.shiftKey||e.ctrlKey||e.metaKey)toggleSel(id);
+  else{S.sel=id;clearMs()}
+  renderTimeline();renderInspector();render();
+  const next=$('#tracks').querySelector(`.clip[data-c="${CSS.escape(id)}"]`);
+  if(next)next.focus({preventScroll:true});
+});
 $('#tscroll').addEventListener('pointerdown',e=>{
   /* Ignore extra fingers while a timeline gesture is already active. */
   if(drag)return;
