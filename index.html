@@ -2757,7 +2757,14 @@ function elOf(c){
   EL.set(c.id,el); hookAudio(el); return el;
 }
 function prune(){ const ids=new Set(allClips().map(c=>c.id));
-  for(const [id,el] of EL){ if(!ids.has(id)){ try{el.pause();el._gain&&el._gain.disconnect();}catch(e){} EL.delete(id);} } }
+  for(const [id,el] of EL){ if(!ids.has(id)){
+    try{el.pause();}catch(e){}
+    try{if(el._gain){el._gain.disconnect();el._gain=null;}}catch(e){}
+    // Release this clip's decoder/buffer; elOf() can recreate it from the library URL.
+    try{el.removeAttribute('src');el.load();}catch(e){}
+    EL.delete(id);
+  } }
+}
 
 function makeClip(m,start){
   const c={id:uid(),type:m.type,mediaId:m.id,name:m.name,start:Math.max(0,start),in:0,out:m.dur||5,dur:5,speed:1,
