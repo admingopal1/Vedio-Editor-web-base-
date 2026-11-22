@@ -3113,6 +3113,7 @@ function syncMedia(){
 /* ---------------- Playback loop ---------------- */
 let last=performance.now();
 function loopFrame(now){
+  const active=S.playing||S.exporting;
   const dt=Math.min(.25,(now-last)/1000); last=now;
   if(S.playing){
     S.time+=dt*S.rate;
@@ -3123,8 +3124,17 @@ function loopFrame(now){
     }
     if(S.exporting)exportTick();
   }
-  if(!S.offline){syncMedia(); render();} if(WC)wcFrame(); updPlayhead(); vu();
-  requestAnimationFrame(loopFrame);
+  // The preview canvas and playback UI do not need a 60fps redraw while paused.
+  // Seeking and editing already call render()/updPlayhead() at the point of change.
+  if(active){
+    if(!S.offline){syncMedia(); render();}
+    if(WC)wcFrame();
+    updPlayhead();
+    vu();
+  }
+  // Keep the idle editor responsive without running a full-rate animation loop.
+  if(S.playing||S.exporting) requestAnimationFrame(loopFrame);
+  else setTimeout(()=>requestAnimationFrame(loopFrame),120);
 }
 function play(){ if(S.duration<=0)return toast('Timeline is empty','info');
   audio(); if(S.time>=S.duration-.01)S.time=0;
