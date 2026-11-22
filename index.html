@@ -3295,14 +3295,20 @@ $('#tscroll').addEventListener('pointerdown',e=>{
   if(!isSel(c.id)){S.sel=c.id;clearMs();renderTimeline();renderInspector();render()}
   else if(S.sel!==c.id){const rest=selIds().filter(x=>x!==c.id);S.sel=c.id;S.ms=new Set(rest);S.msOwner=c.id;renderTimeline();renderInspector();render()}
   const h=e.target.dataset.h;
-  drag={c,pointerId:e.pointerId,mode:h==='l'?'trimL':h==='r'?'trimR':'move',x:e.clientX,y:e.clientY,
+  drag={c,pointerId:e.pointerId,scrollLeft:$('#tscroll').scrollLeft,mode:h==='l'?'trimL':h==='r'?'trimR':'move',x:e.clientX,y:e.clientY,
         s:c.start,i:c.in,o:c.out,d:c.dur,z:S.zoom,el:cel,moved:false,pre:snap()};
   drag.others=drag.mode==='move'?selIds().filter(id=>id!==c.id).map(findClip).filter(o=>o&&!trackOf(o).locked).map(o=>({c:o,s:o.start})):[];
   const ce=$(`[data-c="${c.id}"]`)||cel; drag.el=ce; try{ce.setPointerCapture(e.pointerId)}catch(_){} ce.classList.add('drag');
 });
 $('#tscroll').addEventListener('pointermove',e=>{
   if(!drag||e.pointerId!==drag.pointerId)return;
-  const dx=(e.clientX-drag.x)/drag.z, c=drag.c;
+  /* Nudge the timeline horizontally when dragging a clip near either viewport edge. */
+  const sc=$('#tscroll'), bounds=sc.getBoundingClientRect();
+  if(e.clientY>=bounds.top&&e.clientY<=bounds.bottom){
+    if(e.clientX<bounds.left+36)sc.scrollLeft=Math.max(0,sc.scrollLeft-14);
+    else if(e.clientX>bounds.right-36)sc.scrollLeft=Math.min(sc.scrollWidth-sc.clientWidth,sc.scrollLeft+14);
+  }
+  const dx=((e.clientX-drag.x)+(sc.scrollLeft-drag.scrollLeft))/drag.z, c=drag.c;
   if(Math.abs(e.clientX-drag.x)>2||Math.abs(e.clientY-drag.y)>2)drag.moved=true;
   const m=media(c.mediaId), isSrc=c.type==='video'||c.type==='audio';
   if(drag.mode==='move'){
