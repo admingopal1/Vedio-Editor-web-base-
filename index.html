@@ -516,7 +516,7 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
 /* Mobile-first export dialog: keep controls reachable above the on-screen keyboard and browser bars. */
 @media(max-width:700px){
   #mExport{padding: max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom));align-items:center}
-  #mExport .mbox{width:100%;max-width:560px;max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px);border-radius:16px;overflow-y:auto;overscroll-behavior:contain}
+  #mExport .mbox{width:100%;max-width:560px;max-height:calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px);max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px);min-height:0;border-radius:16px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
   #mExport .mhead{padding:13px 15px}
   #mExport .mbody{padding:15px}
   #mExport .frow{display:block;margin-bottom:13px}
