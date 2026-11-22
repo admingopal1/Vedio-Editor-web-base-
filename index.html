@@ -34,7 +34,7 @@
 :root{
   --bg:#07080d; --bg2:#0b0d14; --panel:#0f1219; --panel2:#141824; --panel3:#1a1f2e;
   --line:#232a3a; --line2:#2e3749;
-  --txt:#e9edf7; --dim:#8d97ae; --dim2:#5f6980;
+  --txt:#e9edf7; --dim:#b5bfd3; --dim2:#a5b1c8;
   --acc:#7c5cff; --acc2:#22d3ee; --acc3:#ff4d8d;
   --ok:#31d0aa; --warn:#ffb020; --err:#ff5470;
   --grad:linear-gradient(135deg,#7c5cff 0%,#22d3ee 100%);
@@ -414,7 +414,7 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
 <symbol id="i-key" viewBox="0 0 24 24"><path d="M12 3l7 9-7 9-7-9z"/></symbol>
 </svg>
 
-<div id="app">
+<div id="app" role="main" aria-label="GOPISUNA Video Studio editor">
   <!-- ================= TOP BAR ================= -->
   <header class="topbar">
     <div class="logo"><div class="mark"><svg class="i"><use href="#i-cut"/></svg></div>CutBox<span class="badge">STUDIO</span></div>
@@ -4310,5 +4310,69 @@ sizeCanvas();renderLib();renderInspector();renderTimeline();updHist();
 requestAnimationFrame(loopFrame);
 setTimeout(()=>toast('Welcome to CutBox Studio — drop media to begin ✦','info',4200),600);
 </script>
+
+<script>
+/* Accessibility enhancements: keep dynamically-rendered editor controls labelled. */
+(function(){
+  const humanize = value => String(value || '')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  function labelControl(el){
+    if(el.matches('button')){
+      if(!el.hasAttribute('aria-label') && !el.hasAttribute('aria-labelledby')){
+        const label = el.getAttribute('data-tip') || el.getAttribute('title') ||
+          (el.innerText || el.textContent || '').replace(/\s+/g,' ').trim() ||
+          el.getAttribute('data-act') || el.getAttribute('data-ma') ||
+          el.getAttribute('data-shape') || el.getAttribute('data-solid') ||
+          el.id || 'Editor action';
+        el.setAttribute('aria-label', humanize(label));
+      }
+      return;
+    }
+    if(el.matches('input,select,textarea')){
+      if(el.type === 'hidden' || el.getAttribute('aria-hidden') === 'true') return;
+      if(!el.hasAttribute('aria-label') && !el.hasAttribute('aria-labelledby')){
+        const wrappedLabel = el.closest('label');
+        const labelText = wrappedLabel && (wrappedLabel.innerText || wrappedLabel.textContent || '').trim();
+        const label = el.getAttribute('data-tip') || el.getAttribute('title') ||
+          (labelText && labelText.length ? labelText : '') ||
+          el.getAttribute('placeholder') || el.getAttribute('name') ||
+          (el.id ? humanize(el.id) : '') || 'Editor setting';
+        el.setAttribute('aria-label', humanize(label));
+      }
+    }
+  }
+  function scan(root){
+    if(root.nodeType !== 1 && root !== document) return;
+    if(root.matches && root.matches('button,input,select,textarea')) labelControl(root);
+    if(root.querySelectorAll) root.querySelectorAll('button,input,select,textarea').forEach(labelControl);
+  }
+  function start(){
+    scan(document);
+    const observer = new MutationObserver(records => {
+      records.forEach(record => record.addedNodes.forEach(node => {
+        if(node.nodeType === 1) scan(node);
+      }));
+    });
+    observer.observe(document.body,{childList:true,subtree:true});
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded',start,{once:true});
+  else start();
+})();
+</script>
+<style>
+/* WCAG 2.2 minimum target size for compact editor controls. */
+button,.tab,.itab,.chip,.mini,.tp,.tb,.tbtn,.del{
+  min-width:24px;
+  min-height:24px;
+}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{
+  outline:2px solid #8fdcff;
+  outline-offset:2px;
+}
+</style>
+
 </body>
 </html>
