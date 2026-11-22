@@ -3302,6 +3302,12 @@ $('#tscroll').addEventListener('pointerdown',e=>{
 });
 $('#tscroll').addEventListener('pointermove',e=>{
   if(!drag||e.pointerId!==drag.pointerId)return;
+  /* Ignore tiny touch jitter so a tap selects a clip without nudging its position. */
+  if(!drag.moved){
+    const threshold=e.pointerType==='touch'?7:3;
+    if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<threshold)return;
+    drag.moved=true;
+  }
   /* Nudge the timeline horizontally when dragging a clip near either viewport edge. */
   const sc=$('#tscroll'), bounds=sc.getBoundingClientRect();
   if(e.clientY>=bounds.top&&e.clientY<=bounds.bottom){
@@ -3309,7 +3315,6 @@ $('#tscroll').addEventListener('pointermove',e=>{
     else if(e.clientX>bounds.right-36)sc.scrollLeft=Math.min(sc.scrollWidth-sc.clientWidth,sc.scrollLeft+14);
   }
   const dx=((e.clientX-drag.x)+(sc.scrollLeft-drag.scrollLeft))/drag.z, c=drag.c;
-  if(Math.abs(e.clientX-drag.x)>2||Math.abs(e.clientY-drag.y)>2)drag.moved=true;
   const m=media(c.mediaId), isSrc=c.type==='video'||c.type==='audio';
   if(drag.mode==='move'){
     let ns=Math.max(0,drag.s+dx);
