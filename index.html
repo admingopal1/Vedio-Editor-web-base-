@@ -3508,10 +3508,11 @@ $('#tscroll').addEventListener('pointermove',e=>{
         trackOf(c).clips=trackOf(c).clips.filter(x=>x.id!==c); nt.clips.push(c); c.trackId=nt.id; } }
   }else if(drag.mode==='trimL'){
     if(isSrc){ const minS=drag.s-drag.i/c.speed, maxS=drag.s+(drag.o-drag.i)/c.speed-.1;
-      let ns=clamp(drag.s+dx,minS,maxS); if(S.snap)ns=snapTime(ns,c,[0,S.time,...allClips().filter(x=>x.id!==c.id).flatMap(x=>[x.start,end(x)])]);
+      let ns=clamp(drag.s+dx,minS,maxS);
+      if(S.snap)ns=snapPoint(ns,[0,S.time,...S.markers,...allClips().filter(x=>x.id!==c.id).flatMap(x=>[x.start,end(x)])]);
       ns=clamp(ns,minS,maxS); c.in=drag.i+(ns-drag.s)*c.speed; c.start=ns;
     }else{ const maxS=drag.s+drag.d-.1; let ns=clamp(drag.s+dx,0,maxS);
-      if(S.snap)ns=snapTime(ns,c,[0,S.time,...S.markers,...allClips().filter(x=>x.id!==c.id).flatMap(x=>[x.start,end(x)])]);
+      if(S.snap)ns=snapPoint(ns,[0,S.time,...S.markers,...allClips().filter(x=>x.id!==c.id).flatMap(x=>[x.start,end(x)])]);
       ns=clamp(ns,0,maxS);c.dur=drag.d-(ns-drag.s);c.start=ns; }
   }else{
     if(isSrc){
@@ -3541,7 +3542,7 @@ function endDrag(e,cancelled=false){
     apply(active.pre);
     return;
   }
-  if(active.moved){ S.hist.push(active.pre); S.fut.length=0; updHist(); }
+  if(active.moved){ S.hist.push(active.pre); if(S.hist.length>120)S.hist.shift(); S.fut.length=0; updHist(); }
   calcDur(); renderTimeline(); renderInspector(); render();
 }
 const commitDrag=e=>endDrag(e,false);
