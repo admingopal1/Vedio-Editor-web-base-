@@ -4105,14 +4105,21 @@ function openExport(){
   $('#eFmt').onchange=note;note();
   openModal('mExport');
 }
+function fallbackToWebM(fps,q,reason){
+  const supported=mimes().some(m=>m.startsWith('video/webm'));
+  if(!supported){console.error(reason);toast('MP4 export failed and WebM is not supported in this browser','err');closeModal('mExport');return}
+  $('#eFmt').value='webm';toast('MP4 unavailable – switching to WebM','info');startExport();
+}
 function startExport(){
   const h=+$('#eRes').value, fps=+$('#eFps').value, fmt=$('#eFmt').value, q=+$('#eQ').value*1e6;
   const k=h/Math.min(S.project.w,S.project.h);
   expCfg={w:Math.round(S.project.w*k/2)*2,h:Math.round(S.project.h*k/2)*2,fps,fmt,q};
   cv.width=expCfg.w;cv.height=expCfg.h;buf.width=cv.width;buf.height=cv.height;fitStage();
   audio();
-  if(fmt==='mp4'&&offMode())return startOffline(fps,q).catch(e=>{console.warn('offline render unavailable',e);if(wcMode())return startWC(fps,q);toast('MP4 export failed – use WebM','err')});
+  if(fmt==='mp4'&&offMode())return startOffline(fps,q).catch(e=>{console.warn('offline render unavailable',e);if(wcMode())return startWC(fps,q);fallbackToWebM(fps,q,e)});
   if(fmt==='mp4'&&wcMode())return startWC(fps,q);
+  const supportedMimes=mimes();
+  if(!window.MediaRecorder||!supportedMimes.length){toast('This browser does not support video recording. Try a browser with WebCodecs or MediaRecorder support.','err');return}
   const stream=cv.captureStream(fps);
   SD=AC.createMediaStreamDestination(); MASTER.connect(SD);
   SD.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
@@ -4200,7 +4207,7 @@ async function wcEnd(){const w=WC;if(!w)return;WC=null;
   }catch(e){
     try{w.venc.close();w.aenc&&w.aenc.close()}catch(_e){}
     console.error('MP4 finalization failed',e);
-    toast('MP4 export failed – try WebM or a lower resolution','err');closeModal('mExport');
+    fallbackToWebM(expCfg.fps,expCfg.q,e);
   }}
 function markExportCancelling(){
   expCancel=true;
