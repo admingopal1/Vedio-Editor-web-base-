@@ -380,9 +380,14 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
     min-height:54px;
     padding:0 8px;
     gap:5px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scrollbar-width:none;
     overscroll-behavior-x:contain;
     -webkit-overflow-scrolling:touch;
   }
+  .topbar::-webkit-scrollbar { display:none; }
+  .topbar .sp { flex:0 0 8px; }
   .logo { gap:6px; font-size:13px; padding-right:2px; }
   .logo .mark { width:27px; height:27px; }
   .logo .mark::after { animation:none; }
