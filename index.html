@@ -436,6 +436,8 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   .thead .tn { font-size:10px; }
   .tscroll { min-width:0; overflow-x:auto; overscroll-behavior-x:contain; }
   .grip { height:9px; min-height:9px; touch-action:pan-y; }
+  /* Keep custom timeline clip/trim and height-resize gestures from being hijacked by browser panning. */
+  .clip, .clip .h, .grip { touch-action:none; }
   .panel.left, .panel.right {
     position:fixed;
     z-index:120;
