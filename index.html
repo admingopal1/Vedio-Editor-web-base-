@@ -246,6 +246,9 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
 .tl{height:var(--tlh);margin:0 8px 8px;display:flex;flex-direction:column}
 .tlbar{display:flex;align-items:center;gap:5px;padding:7px 9px;border-bottom:1px solid var(--line);flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
 .tlbar::-webkit-scrollbar{display:none}
+/* Keep the selection mode reachable while the action strip is horizontally scrolled. */
+.tlbar #bMulti{position:sticky;left:0;z-index:3;flex:none;background:var(--panel);box-shadow:5px 0 8px rgba(0,0,0,.18)}
+.tlcount{flex:none;color:var(--acc2);font-size:10px;font-weight:700;white-space:nowrap;padding:0 5px}
 .tb{display:flex;align-items:center;gap:5px;padding:6px 9px;border-radius:8px;color:var(--dim);border:1px solid transparent;font-size:11.5px;font-weight:600;white-space:nowrap}
 .tb:hover{background:var(--panel2);color:var(--txt);border-color:var(--line)}
 .tb.on{color:var(--acc2);background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.28)}
@@ -710,7 +713,7 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   <div class="grip" id="grip"></div>
   <div class="panel tl">
     <div class="tlbar">
-      <button class="tb" id="bMulti" type="button" aria-pressed="false" data-tip="Tap clips to add or remove them from the selection"><svg class="i"><use href="#i-check"/></svg><span>Multi-select</span></button>
+      <button class="tb" id="bMulti" type="button" aria-pressed="false" data-tip="Tap clips to add or remove them from the selection"><svg class="i"><use href="#i-check"/></svg><span>Multi-select</span></button><span class="tlcount" id="tlSelCount" aria-live="polite" aria-atomic="true"></span>
       <button class="tb" id="bSplit" data-tip="Split at playhead (S)"><svg class="i"><use href="#i-cut"/></svg>Split</button>
       <button class="tb" id="bSil" data-tip="Remove silences from selected clip"><svg class="i"><use href="#i-cut"/></svg>Silences</button>
       <button class="tb" id="bDup" data-tip="Duplicate (Ctrl+D)"><svg class="i"><use href="#i-copy"/></svg>Duplicate</button>
@@ -3318,7 +3321,10 @@ function renderTimeline(){
   /* tracks */
   $('#tracks').innerHTML=S.tracks.map(t=>`<div class="track ${t.type==='audio'?'a':''}" data-t="${t.id}" style="width:${W}px">
     ${t.clips.map(c=>clipHTML(c,t)).join('')}</div>`).join('');
-  $$('#tracks .clip').forEach(el=>{ const c=findClip(el.dataset.c); if(c&&c.type==='audio')paintWave(el,c); });
+  $('#tracks .clip').forEach(el=>{ const c=findClip(el.dataset.c); if(c&&c.type==='audio')paintWave(el,c); });
+  const selectedCount=selIds().length;
+  $('#tlSelCount').textContent=selectedCount?`${selectedCount} selected`:'';
+  $('#tlSelCount').setAttribute('aria-label',selectedCount?`${selectedCount} clips selected`:'No clips selected');
   updPlayhead();
 }
 function clipHTML(c,t){
