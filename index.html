@@ -535,6 +535,30 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   #mExport #expFoot{flex-wrap:wrap}
   #mExport #expFoot .btn{min-width:0}
 }
+
+/* Compact export dialog layouts for narrow and landscape phone screens. */
+@media(max-width:380px){
+  #mExport{padding-left:6px;padding-right:6px}
+  #mExport .mbox{border-radius:12px}
+  #mExport .mhead{gap:9px;padding:11px 12px}
+  #mExport .mbody{padding:12px}
+  #mExport .mfoot{padding-left:9px;padding-right:9px;gap:6px}
+  #mExport .mfoot .btn{padding-left:10px!important;padding-right:10px!important;font-size:12px}
+}
+@media(max-height:520px) and (orientation:landscape){
+  #mExport{align-items:flex-start;padding:6px max(8px,env(safe-area-inset-right)) 6px max(8px,env(safe-area-inset-left))}
+  #mExport .mbox{max-height:calc(100vh - 12px);max-height:calc(100dvh - 12px);width:min(100%,680px);border-radius:12px}
+  #mExport .mhead{padding:8px 12px;gap:9px}
+  #mExport .mhead p{font-size:11px;margin-top:2px}
+  #mExport .mbody{padding:10px 12px}
+  #mExport .frow{margin-bottom:8px}
+  #mExport .frow>label{margin-bottom:4px}
+  #mExport .frow select,#mExport .frow input{min-height:38px}
+  #mExport #eProg{margin-top:8px}
+  #mExport #eProg .prog{margin:7px 0}
+  #mExport .mfoot{padding:7px 10px;gap:7px}
+  #mExport .mfoot .btn{min-height:38px}
+}
 </style>
 </head>
 <body>
