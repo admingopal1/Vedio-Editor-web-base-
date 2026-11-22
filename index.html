@@ -4291,7 +4291,8 @@ async function startOffline(fps,q){
   $('#vtag').innerHTML=`<span class="rec-dot"></span><span>PREPARING EXPORT ${W}×${Hh}</span>`;
   let mix=await mixAudio(sr);
   if(expCancel){S.exporting=false;S.offline=false;closeModal('mExport');toast('Render cancelled','info');return}
-  let ac=null;if(mix){for(const c of['mp4a.40.2','opus']){try{const r=await AudioEncoder.isConfigSupported({codec:c,sampleRate:sr,numberOfChannels:2,bitrate:192000});if(r.supported){ac=c;break}}catch(e){}}}
+  let ac=null;if(mix&&typeof AudioEncoder!=='undefined'){for(const c of['mp4a.40.2','opus']){try{const r=await AudioEncoder.isConfigSupported({codec:c,sampleRate:sr,numberOfChannels:2,bitrate:192000});if(r.supported){ac=c;break}}catch(e){}}}
+  if(mix&&!ac){mix=null;S.exporting=false;S.offline=false;fallbackToWebM(fps,q,new Error('No supported MP4 audio encoder'));return}
   const mux=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),video:{codec:vc.startsWith('avc')?'avc':'vp9',width:W,height:Hh},
     ...(ac?{audio:{codec:ac==='opus'?'opus':'aac',numberOfChannels:2,sampleRate:sr}}:{}),fastStart:'in-memory',firstTimestampBehavior:'offset'});
   let err=null;const onErr=e=>{err=e;console.error(e)};
