@@ -3358,6 +3358,9 @@ $('#tscroll').addEventListener('pointerdown',e=>{
   if(!isSel(c.id)){S.sel=c.id;clearMs();renderTimeline();renderInspector();render()}
   else if(S.sel!==c.id){const rest=selIds().filter(x=>x!==c.id);S.sel=c.id;S.ms=new Set(rest);S.msOwner=c.id;renderTimeline();renderInspector();render()}
   const h=e.target.dataset.h;
+  /* On touch screens, a clip-body gesture belongs to horizontal timeline scrolling.
+     Move clips with the dedicated grip; trim with the visible edge handles. */
+  if(e.pointerType==='touch'&&!h)return;
   drag={c,pointerId:e.pointerId,scrollLeft:$('#tscroll').scrollLeft,mode:h==='l'?'trimL':h==='r'?'trimR':'move',x:e.clientX,y:e.clientY,
         s:c.start,i:c.in,o:c.out,d:c.dur,z:S.zoom,el:cel,moved:false,pre:snap()};
   drag.others=drag.mode==='move'?selIds().filter(id=>id!==c.id).map(findClip).filter(o=>o&&!trackOf(o).locked).map(o=>({c:o,s:o.start})):[];
