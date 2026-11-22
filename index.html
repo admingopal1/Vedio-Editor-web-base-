@@ -488,6 +488,21 @@ textarea.txtin{resize:vertical;min-height:64px;font-size:12.5px;line-height:1.45
   .logo .mark::after { animation:none !important; }
 }
 
+
+/* Mobile-first export dialog: keep controls reachable above the on-screen keyboard and browser bars. */
+@media(max-width:700px){
+  #mExport{padding: max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom));align-items:center}
+  #mExport .mbox{width:100%;max-width:560px;max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px);border-radius:16px;overflow-y:auto;overscroll-behavior:contain}
+  #mExport .mhead{padding:13px 15px}
+  #mExport .mbody{padding:15px}
+  #mExport .frow{display:block;margin-bottom:13px}
+  #mExport .frow>label{display:block;width:auto;margin:0 0 6px;font-size:12px}
+  #mExport .frow>div{width:100%;min-width:0}
+  #mExport .frow select,#mExport .frow input{width:100%;min-height:44px;font-size:16px}
+  #mExport .mfoot{position:sticky;bottom:0;z-index:2;padding:11px 12px calc(11px + env(safe-area-inset-bottom));background:var(--panel);gap:8px}
+  #mExport .mfoot .btn{min-height:44px;flex:1;justify-content:center}
+  #mExport #expBody video{max-height:32vh}
+}
 </style>
 </head>
 <body>
