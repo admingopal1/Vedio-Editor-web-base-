@@ -3262,6 +3262,8 @@ $('#tscroll').addEventListener('scroll',()=>{ $('#headsIn').style.transform=`tra
 /* ---------------- Timeline interaction ---------------- */
 let drag=null;
 $('#tscroll').addEventListener('pointerdown',e=>{
+  /* Ignore extra fingers while a timeline gesture is already active. */
+  if(drag)return;
   const mk=e.target.closest('[data-mk]');
   if(mk){ const mt=parseFloat(mk.dataset.mk); if(e.altKey){push();S.markers=S.markers.filter(x=>x!==mt);renderTimeline();toast('Marker removed','ok');return} seekTime(mt); return; }
   if(e.target.closest('#ruler')||e.target.closest('.ruler')){
@@ -3322,6 +3324,10 @@ function endDrag(e){
 }
 $('#tscroll').addEventListener('pointerup',endDrag);
 $('#tscroll').addEventListener('pointercancel',endDrag);
+/* Finish gestures even if pointer capture is lost or the finger leaves the scroll area. */
+document.addEventListener('pointerup',endDrag);
+document.addEventListener('pointercancel',endDrag);
+document.addEventListener('lostpointercapture',endDrag);
 function snapTime(t,c,cands){
   const th=9/S.zoom, d=dur(c); let best=t,bd=th;
   for(const x of cands){ for(const [edge,off] of [[t,0],[t+d,d]]){
