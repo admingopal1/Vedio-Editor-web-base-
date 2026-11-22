@@ -3330,19 +3330,28 @@ $('#tscroll').addEventListener('pointermove',e=>{
     const lb=el.querySelector('.lb span'); if(lb&&c.type==='text')lb.textContent=c.text.content.slice(0,40); }
   calcDur(); render(); updPlayhead();
 });
-function endDrag(e){
+function endDrag(e,cancelled=false){
   if(!drag)return;
-  const c=drag.c;
-  drag.el.classList.remove('drag');
-  if(drag.moved){ S.hist.push(drag.pre); S.fut.length=0; updHist(); }
-  drag=null; calcDur(); renderTimeline(); renderInspector(); render();
+  if(e?.pointerId!==undefined&&drag.pointerId!==undefined&&e.pointerId!==drag.pointerId)return;
+  const active=drag;
+  try{active.el.classList.remove('drag')}catch(_){}
+  drag=null;
+  if(cancelled){
+    /* A cancelled touch gesture must not leave a half-applied edit behind. */
+    apply(active.pre);
+    return;
+  }
+  if(active.moved){ S.hist.push(active.pre); S.fut.length=0; updHist(); }
+  calcDur(); renderTimeline(); renderInspector(); render();
 }
-$('#tscroll').addEventListener('pointerup',endDrag);
-$('#tscroll').addEventListener('pointercancel',endDrag);
+const commitDrag=e=>endDrag(e,false);
+const cancelDrag=e=>endDrag(e,true);
+$('#tscroll').addEventListener('pointerup',commitDrag);
+$('#tscroll').addEventListener('pointercancel',cancelDrag);
 /* Finish gestures even if pointer capture is lost or the finger leaves the scroll area. */
-document.addEventListener('pointerup',endDrag);
-document.addEventListener('pointercancel',endDrag);
-document.addEventListener('lostpointercapture',endDrag);
+document.addEventListener('pointerup',commitDrag);
+document.addEventListener('pointercancel',cancelDrag);
+document.addEventListener('lostpointercapture',cancelDrag);
 function snapTime(t,c,cands){
   const th=9/S.zoom, d=dur(c); let best=t,bd=th;
   for(const x of cands){ for(const [edge,off] of [[t,0],[t+d,d]]){
