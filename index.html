@@ -4011,7 +4011,7 @@ function startExport(){
   S.exporting=true;S.rate=1;S.loop=false;S.time=0;
   $('#eProg').style.display='block';$('#eGo').disabled=true;$('#eGo').style.opacity=.5;
   $('#expFoot').innerHTML=`<button class="btn dgr" style="width:auto;padding:9px 18px" id="eStop">Cancel render</button>`;
-  $('#eStop').onclick=()=>{expCancel=true;S.playing=false;try{pause()}catch(e){}try{REC.stop()}catch(e){}};
+  $('#eStop').onclick=()=>{markExportCancelling();S.playing=false;try{pause()}catch(e){}try{REC.stop()}catch(e){}};
   $('#vtag').innerHTML=`<span class="rec-dot"></span><span>RENDERING ${expCfg.w}×${expCfg.h}</span>`;
   REC.start(1000); play();
 }
@@ -4050,7 +4050,7 @@ async function startWC(fps,q){
   expCancel=false;S.exporting=true;S.rate=1;S.loop=false;S.time=0;
   $('#eProg').style.display='block';$('#eGo').disabled=true;$('#eGo').style.opacity=.5;
   $('#expFoot').innerHTML=`<button class="btn dgr" style="width:auto;padding:9px 18px" id="eStop">Cancel render</button>`;
-  $('#eStop').onclick=()=>{expCancel=true;S.playing=false;wcEnd()};
+  $('#eStop').onclick=()=>{markExportCancelling();S.playing=false;wcEnd()};
   $('#vtag').innerHTML=`<span class="rec-dot"></span><span>RENDERING ${W}×${Hh}</span>`;
   play();
 }
@@ -4070,6 +4070,12 @@ async function wcEnd(){const w=WC;if(!w)return;WC=null;
     console.error('MP4 finalization failed',e);
     toast('MP4 export failed – try WebM or a lower resolution','err');closeModal('mExport');
   }}
+function markExportCancelling(){
+  expCancel=true;
+  const b=$('#eStop'),t=$('#eTxt');
+  if(b){b.disabled=true;b.textContent='Cancelling…';b.setAttribute('aria-disabled','true')}
+  if(t)t.textContent='Cancelling render… please wait';
+}
 function exportTick(){
   const p=clamp(S.time/Math.max(.01,S.duration),0,1);
   const bar=$('#eBar'); if(bar){bar.style.width=(p*100)+'%';$('#ePct').textContent=Math.round(p*100)+'%';
@@ -4144,7 +4150,7 @@ async function startOffline(fps,q){
   pause();expCancel=false;S.exporting=true;S.offline=true;S.rate=1;S.loop=false;
   $('#eProg').style.display='block';$('#eGo').disabled=true;$('#eGo').style.opacity=.5;
   $('#expFoot').innerHTML=`<button class="btn dgr" style="width:auto;padding:9px 18px" id="eStop">Cancel render</button>`;
-  $('#eStop').onclick=()=>{expCancel=true};
+  $('#eStop').onclick=()=>{markExportCancelling()};
   $('#vtag').innerHTML=`<span class="rec-dot"></span><span>RENDERING ${W}×${Hh}</span>`;
   const N=Math.max(1,Math.ceil(S.duration*fps)),t0=performance.now();let ok=true;
   try{
