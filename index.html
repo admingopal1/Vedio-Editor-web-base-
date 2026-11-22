@@ -3989,7 +3989,7 @@ async function exportWav(){
   }catch(e){console.error(e);go.disabled=false;toast('Audio export failed','err')}}
 async function startOffline(fps,q){
   const W=expCfg.w,Hh=expCfg.h,sr=48000;let vc=WCAVC;if(vc.startsWith('avc')&&Math.max(W,Hh)>2560)vc='avc1.640033';
-  const mix=await mixAudio(sr);   /* may throw -> caller falls back to real-time */
+  let mix=await mixAudio(sr);   /* may throw -> caller falls back to real-time */
   let ac=null;if(mix){for(const c of['mp4a.40.2','opus']){try{const r=await AudioEncoder.isConfigSupported({codec:c,sampleRate:sr,numberOfChannels:2,bitrate:192000});if(r.supported){ac=c;break}}catch(e){}}}
   const mux=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),video:{codec:vc.startsWith('avc')?'avc':'vp9',width:W,height:Hh},
     ...(ac?{audio:{codec:ac==='opus'?'opus':'aac',numberOfChannels:2,sampleRate:sr}}:{}),fastStart:'in-memory',firstTimestampBehavior:'offset'});
@@ -3999,7 +3999,12 @@ async function startOffline(fps,q){
   if(ac){aenc=new AudioEncoder({output:(c,m)=>mux.addAudioChunk(c,m),error:onErr});aenc.configure({codec:ac,sampleRate:sr,numberOfChannels:2,bitrate:192000});
     const a0=mix.getChannelData(0),a1=mix.numberOfChannels>1?mix.getChannelData(1):a0,N=mix.length;
     for(let o=0;o<N;o+=48000){const n=Math.min(48000,N-o),d=new Float32Array(n*2);d.set(a0.subarray(o,o+n),0);d.set(a1.subarray(o,o+n),n);
-      aenc.encode(new AudioData({format:'f32-planar',sampleRate:sr,numberOfFrames:n,numberOfChannels:2,timestamp:Math.round(o*1e6/sr),data:d}))}}
+      const ad=new AudioData({format:'f32-planar',sampleRate:sr,numberOfFrames:n,numberOfChannels:2,timestamp:Math.round(o*1e6/sr),data:d});
+      try{aenc.encode(ad)}finally{ad.close()}
+    }
+    /* Audio has been queued in the encoder; release the full mixed PCM buffer before video rendering. */
+    mix=null;
+  }
   pause();expCancel=false;S.exporting=true;S.offline=true;S.rate=1;S.loop=false;
   $('#eProg').style.display='block';$('#eGo').disabled=true;$('#eGo').style.opacity=.5;
   $('#expFoot').innerHTML=`<button class="btn dgr" style="width:auto;padding:9px 18px" id="eStop">Cancel render</button>`;
