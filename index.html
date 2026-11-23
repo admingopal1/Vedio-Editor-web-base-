@@ -4352,21 +4352,22 @@ const idb=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=index
   return{put:(st,v,k)=>tx(st,'readwrite',s=>k===undefined?s.put(v):s.put(v,k)),get:(st,k)=>tx(st,'readonly',s=>s.get(k)),all:st=>tx(st,'readonly',s=>s.getAll()),
     keys:st=>tx(st,'readonly',s=>s.getAllKeys()),del:(st,k)=>tx(st,'readwrite',s=>s.delete(k)),clear:st=>tx(st,'readwrite',s=>s.clear())}})();
 let asReady=false,asLast='',asBusy=false,asQueued=false;
+const asSig=()=>snap()+JSON.stringify(S.media.map(m=>[m.id,m.name,m.type,m.dur,m.w,m.h,m.size]))+S.master;
 function asInd(t){let e=$('#saveInd');if(!e){e=document.createElement('span');e.id='saveInd';e.setAttribute('role','status');e.setAttribute('aria-live','polite');e.setAttribute('aria-atomic','true');e.style.cssText='color:var(--dim);font-size:11px;white-space:nowrap';$('#pname').insertAdjacentElement('afterend',e)}e.textContent=t}
 async function autosave(){
   if(!asReady||S.exporting)return;
   if(asBusy){asQueued=true;return}
-  const sig=snap()+JSON.stringify(S.media.map(m=>[m.id,m.name,m.type,m.dur,m.w,m.h,m.size]))+S.master;
+  const sig=asSig();
   if(sig===asLast)return;
-  asBusy=true;asInd('Saving…');
+  asBusy=true;asInd('Saving…');let failed=0;
   try{
     for(const m of S.media){if(!m._saved&&m.file){
-      await idb.put('media',{id:m.id,name:m.name,type:m.type,dur:m.dur,w:m.w,h:m.h,size:m.size,thumb:typeof m.thumb==='string'?m.thumb:null,strip:typeof m.strip==='string'?m.strip:null,peaks:m.peaks||null,blob:m.file});m._saved=true
+      try{await idb.put('media',{id:m.id,name:m.name,type:m.type,dur:m.dur,w:m.w,h:m.h,size:m.size,thumb:typeof m.thumb==='string'?m.thumb:null,strip:typeof m.strip==='string'?m.strip:null,peaks:m.peaks||null,blob:m.file});m._saved=true}catch(e){failed++;console.warn('autosave media',m&&m.name,e)}
     }}
     const ids=S.media.map(m=>m.id);
     await idb.put('meta',{tracks:S.tracks,project:S.project,markers:S.markers,mediaIds:ids,master:S.master,savedAt:Date.now()},'project');
     for(const k of await idb.keys('media'))if(!ids.includes(k))await idb.del('media',k);
-    asLast=sig;asInd('✓ Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+    asLast=sig;asInd(failed?'Timeline saved · '+failed+' large file(s) not stored (storage full) · export a .cutbox backup':'✓ Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
   }catch(e){console.warn('autosave',e);const quota=e&&(/quota/i.test(e.name||'')||/quota|storage/i.test(e.message||''));asInd(quota?'Storage full · export a .cutbox backup':'Autosave failed · check browser storage')}
   asBusy=false;
   if(asQueued){asQueued=false;autosave()}
@@ -4395,14 +4396,17 @@ async function restoreProject(meta,rowsIn,fromFile){
       b.innerHTML=`<span>Previous project found · <b>${n} clips · ${mediaN} media</b> · saved ${new Date(meta.savedAt).toLocaleString([],{dateStyle:'medium',timeStyle:'short'})}</span><button class="btn acc" id="rsYes" style="width:auto;padding:7px 14px">Restore</button><button class="btn" id="rsNo" style="width:auto;padding:7px 14px">Start fresh</button>`;
       document.body.appendChild(b);
       $('#rsYes').onclick=async()=>{b.remove();try{await restoreProject(meta)}catch(e){console.error(e);toast('Could not restore project','err')}asReady=true};
-      $('#rsNo').onclick=async()=>{b.remove();try{await idb.clear('media');await idb.clear('meta')}catch(e){}asReady=true};
+      $('#rsNo').onclick=async()=>{if(!confirm('Delete the previous project permanently? This cannot be undone.\n\nPress Cancel to keep it, then click Restore.'))return;b.remove();try{await idb.clear('media');await idb.clear('meta')}catch(e){}asReady=true};
     }else asReady=true;
   }catch(e){asReady=true}
   setInterval(autosave,1800);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')autosave()});
   addEventListener('pagehide',()=>{autosave()});
 })();
-addEventListener('beforeunload',e=>{if(S.exporting){e.preventDefault();e.returnValue=''}});
+addEventListener('beforeunload',e=>{
+  let dirty=false;try{dirty=asReady&&S.tracks.some(t=>t.clips.length)&&(asBusy||asSig()!==asLast)}catch(_){}
+  if(dirty)autosave();
+  if(S.exporting||dirty){e.preventDefault();e.returnValue=''}});
 
 /* ============================================================================
    BATCH 2: smart audio (normalize / duck / voice clean-up) + subtitles
